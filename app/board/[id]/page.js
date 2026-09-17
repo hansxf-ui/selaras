@@ -21,6 +21,8 @@ function makeCard(type, extra = {}) {
     textLight: true, // teks krem (terang) vs gelap
     imageUrl: null,
     caption: "",
+    captionXPct: 50,
+    captionYPct: 85,
     ...extra,
   };
 }
@@ -44,6 +46,8 @@ export default function BoardEditorPage() {
   const fileInputRef = useRef(null);
   const dragState = useRef(null);
   const rotateState = useRef(null);
+  const resizeState = useRef(null);
+  const captionDragState = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -151,6 +155,34 @@ export default function BoardEditorPage() {
     e.stopPropagation();
   }
 
+  function onResizePointerDown(e, card) {
+    e.stopPropagation();
+    resizeState.current = {
+      id: card.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: card.width,
+      startHeight: card.height,
+    };
+    setSelectedId(card.id);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function onCaptionPointerDown(e, card) {
+    e.stopPropagation();
+    const fillRect = e.currentTarget.parentElement.getBoundingClientRect();
+    captionDragState.current = {
+      id: card.id,
+      fillWidth: fillRect.width,
+      fillHeight: fillRect.height,
+      startX: e.clientX,
+      startY: e.clientY,
+      startXPct: card.captionXPct,
+      startYPct: card.captionYPct,
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
   useEffect(() => {
     function onMove(e) {
       if (dragState.current) {
@@ -171,10 +203,28 @@ export default function BoardEditorPage() {
         const angle = (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
         updateCard(id, { rotation: startRotation + (angle - startAngle) });
       }
+      if (resizeState.current) {
+        const { id, startX, startY, startWidth, startHeight } = resizeState.current;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const width = Math.max(60, Math.min(400, startWidth + dx));
+        const height = Math.max(60, Math.min(460, startHeight + dy));
+        updateCard(id, { width, height });
+      }
+      if (captionDragState.current) {
+        const { id, fillWidth, fillHeight, startX, startY, startXPct, startYPct } = captionDragState.current;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const captionXPct = Math.max(5, Math.min(95, startXPct + (dx / fillWidth) * 100));
+        const captionYPct = Math.max(5, Math.min(95, startYPct + (dy / fillHeight) * 100));
+        updateCard(id, { captionXPct, captionYPct });
+      }
     }
     function onUp() {
       dragState.current = null;
       rotateState.current = null;
+      resizeState.current = null;
+      captionDragState.current = null;
     }
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -296,7 +346,18 @@ export default function BoardEditorPage() {
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
-                      {card.caption && <div className="card-caption">{card.caption}</div>}
+                      {card.caption && (
+                        <div
+                          className="card-caption"
+                          onPointerDown={(e) => onCaptionPointerDown(e, card)}
+                          style={{
+                            left: `${card.captionXPct}%`,
+                            top: `${card.captionYPct}%`,
+                          }}
+                        >
+                          {card.caption}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -310,7 +371,10 @@ export default function BoardEditorPage() {
                       ↻
                     </div>
                     <div className="ctrl-btn edit-btn" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setPanelId(card.id); }}>
-                      🎨
+                      ✏️
+                    </div>
+                    <div className="ctrl-btn resize-btn" onPointerDown={(e) => onResizePointerDown(e, card)}>
+                      ⤡
                     </div>
                   </>
                 )}
@@ -535,16 +599,19 @@ export default function BoardEditorPage() {
         }
         .card-caption {
           position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(36, 28, 51, 0.55);
+          transform: translate(-50%, -50%);
+          max-width: 85%;
+          background: rgba(36, 28, 51, 0.6);
           color: #f3e9d8;
           font-family: "Fraunces", serif;
           font-style: italic;
           font-size: 12.5px;
           text-align: center;
-          padding: 8px 10px;
+          padding: 7px 12px;
+          border-radius: 10px;
+          cursor: grab;
+          touch-action: none;
+          z-index: 3;
         }
         .ctrl-btn {
           position: absolute;
@@ -579,13 +646,24 @@ export default function BoardEditorPage() {
           touch-action: none;
         }
         .edit-btn {
-          bottom: -14px;
-          right: -14px;
+          top: -14px;
+          left: -14px;
           width: 34px;
           height: 34px;
           background: var(--gold);
           color: #4a3352;
+          font-size: 13px;
+          touch-action: none;
+        }
+        .resize-btn {
+          bottom: -14px;
+          right: -14px;
+          width: 32px;
+          height: 32px;
+          background: var(--sage);
+          color: #fff;
           font-size: 14px;
+          cursor: nwse-resize;
           touch-action: none;
         }
 
