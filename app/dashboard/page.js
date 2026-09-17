@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [revealId, setRevealId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -83,6 +84,15 @@ export default function DashboardPage() {
     if (!sure) return;
     await supabase.from("boards").delete().eq("id", board.id);
     setBoards((prev) => prev.filter((b) => b.id !== board.id));
+    setRevealId(null);
+  }
+
+  function handleTileClick(board) {
+    if (revealId === board.id) {
+      router.push(`/board/${board.id}`);
+    } else {
+      setRevealId(board.id);
+    }
   }
 
   if (loading) {
@@ -111,38 +121,42 @@ export default function DashboardPage() {
           </button>
         </div>
       ) : (
-        <div className="board-grid">
+        <div className="board-grid" onClick={() => setRevealId(null)}>
           {boards.map((b) => (
-            <div key={b.id} className="board-tile" onClick={() => router.push(`/board/${b.id}`)}>
+            <div key={b.id} className="board-tile" onClick={(e) => { e.stopPropagation(); handleTileClick(b); }}>
               <div style={{ position: "relative" }}>
                 <BoardPreview elements={b.elements} />
-                <button
-                  onClick={(e) => deleteBoard(e, b)}
-                  aria-label="Hapus board"
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
-                    border: "none",
-                    background: "rgba(36,28,51,0.55)",
-                    color: "#fff",
-                    fontSize: 13,
-                    cursor: "pointer",
-                  }}
-                >
-                  ×
-                </button>
+                {revealId === b.id && (
+                  <button
+                    onClick={(e) => deleteBoard(e, b)}
+                    aria-label="Hapus board"
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      width: 26,
+                      height: 26,
+                      borderRadius: "50%",
+                      border: "none",
+                      background: "rgba(36,28,51,0.65)",
+                      color: "#fff",
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
               </div>
               <div className="board-tile-body">
                 <p className="board-tile-title">{b.title}</p>
-                <p className="board-tile-meta">{relativeTime(b.updated_at || b.created_at)}</p>
+                <p className="board-tile-meta">
+                  {revealId === b.id ? "Ketuk lagi untuk membuka" : relativeTime(b.updated_at || b.created_at)}
+                </p>
               </div>
             </div>
           ))}
-          <button className="board-tile-new" onClick={createBoard}>
+          <button className="board-tile-new" onClick={(e) => { e.stopPropagation(); createBoard(); }}>
             <span style={{ fontSize: 20 }}>+</span>
             <span>Board baru</span>
           </button>
