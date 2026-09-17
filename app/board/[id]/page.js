@@ -173,8 +173,6 @@ export default function BoardEditorPage() {
       }
     }
     function onUp() {
-      const activeId = dragState.current?.id || rotateState.current?.id;
-      if (activeId) setPanelId(activeId);
       dragState.current = null;
       rotateState.current = null;
     }
@@ -311,6 +309,9 @@ export default function BoardEditorPage() {
                     <div className="ctrl-btn rotate-btn" onPointerDown={(e) => onRotatePointerDown(e, card)}>
                       ↻
                     </div>
+                    <div className="ctrl-btn edit-btn" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setPanelId(card.id); }}>
+                      🎨
+                    </div>
                   </>
                 )}
               </div>
@@ -320,10 +321,10 @@ export default function BoardEditorPage() {
 
         {panelCard && (
           <>
-            <div className="panel-veil" onClick={() => { setSelectedId(null); setPanelId(null); }} />
+            <div className="panel-veil" onClick={() => setPanelId(null)} />
             <div className="side-panel">
               <div className="panel-handle" />
-              <button className="panel-close" onClick={() => { setSelectedId(null); setPanelId(null); }}>Selesai</button>
+              <button className="panel-close" onClick={() => setPanelId(null)}>Selesai</button>
 
               {panelCard.type !== "image" && (
                 <div className="panel-section">
@@ -575,6 +576,16 @@ export default function BoardEditorPage() {
           color: #fff;
           font-size: 15px;
           cursor: grab;
+          touch-action: none;
+        }
+        .edit-btn {
+          bottom: -14px;
+          right: -14px;
+          width: 34px;
+          height: 34px;
+          background: var(--gold);
+          color: #4a3352;
+          font-size: 14px;
           touch-action: none;
         }
 
