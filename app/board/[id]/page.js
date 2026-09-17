@@ -25,6 +25,7 @@ function makeCard(type, extra = {}) {
     caption: "",
     captionXPct: 50,
     captionYPct: 85,
+    captionWidth: 140,
     captionScale: 1,
     captionRotation: 0,
     ...extra,
@@ -195,7 +196,13 @@ export default function BoardEditorPage() {
 
   function onCaptionResizePointerDown(e, card) {
     e.stopPropagation();
-    captionResizeState.current = { id: card.id, startY: e.clientY, startScale: card.captionScale };
+    captionResizeState.current = {
+      id: card.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: card.captionWidth,
+      startScale: card.captionScale,
+    };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
@@ -246,10 +253,12 @@ export default function BoardEditorPage() {
         updateCard(id, { [xKey]: xPct, [yKey]: yPct });
       }
       if (captionResizeState.current) {
-        const { id, startY, startScale } = captionResizeState.current;
+        const { id, startX, startY, startWidth, startScale } = captionResizeState.current;
+        const dx = e.clientX - startX;
         const dy = e.clientY - startY;
+        const captionWidth = Math.max(70, Math.min(300, startWidth + dx));
         const captionScale = Math.max(0.6, Math.min(2.5, startScale + dy / 100));
-        updateCard(id, { captionScale });
+        updateCard(id, { captionWidth, captionScale });
       }
       if (captionRotateState.current) {
         const { id, centerX, centerY, startAngle, startRotation } = captionRotateState.current;
@@ -399,6 +408,7 @@ export default function BoardEditorPage() {
                           style={{
                             left: `${card.captionXPct}%`,
                             top: `${card.captionYPct}%`,
+                            width: `${card.captionWidth}px`,
                             transform: `translate(-50%, -50%) rotate(${card.captionRotation}deg) scale(${card.captionScale})`,
                           }}
                         >
@@ -676,7 +686,7 @@ export default function BoardEditorPage() {
         }
         .card-caption {
           position: absolute;
-          max-width: 85%;
+          box-sizing: border-box;
           background: rgba(36, 28, 51, 0.6);
           color: #f3e9d8;
           font-family: "Fraunces", serif;
