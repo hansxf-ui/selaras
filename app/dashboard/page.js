@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [revealId, setRevealId] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -78,12 +79,16 @@ export default function DashboardPage() {
     if (!error) router.push(`/board/${data.id}`);
   }
 
-  async function deleteBoard(e, board) {
+  function askDeleteBoard(e, board) {
     e.stopPropagation();
-    const sure = window.confirm(`Hapus board "${board.title}"? Tindakan ini tidak bisa dibatalkan.`);
-    if (!sure) return;
-    await supabase.from("boards").delete().eq("id", board.id);
-    setBoards((prev) => prev.filter((b) => b.id !== board.id));
+    setPendingDelete(board);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    await supabase.from("boards").delete().eq("id", pendingDelete.id);
+    setBoards((prev) => prev.filter((b) => b.id !== pendingDelete.id));
+    setPendingDelete(null);
     setRevealId(null);
   }
 
@@ -128,7 +133,7 @@ export default function DashboardPage() {
                 <BoardPreview elements={b.elements} />
                 {revealId === b.id && (
                   <button
-                    onClick={(e) => deleteBoard(e, b)}
+                    onClick={(e) => askDeleteBoard(e, b)}
                     aria-label="Hapus board"
                     style={{
                       position: "absolute",
@@ -160,6 +165,75 @@ export default function DashboardPage() {
             <span style={{ fontSize: 20 }}>+</span>
             <span>Board baru</span>
           </button>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div
+          onClick={() => setPendingDelete(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(36,28,51,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--panel)",
+              borderRadius: 20,
+              maxWidth: 320,
+              width: "100%",
+              padding: "26px 24px",
+              boxShadow: "0 30px 60px -20px rgba(36,28,51,0.4)",
+            }}
+          >
+            <p style={{ fontFamily: "Fraunces, serif", fontWeight: 500, fontSize: 18, margin: "0 0 8px" }}>
+              Hapus board ini?
+            </p>
+            <p style={{ fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.5, margin: "0 0 22px" }}>
+              "{pendingDelete.title}" akan terhapus permanen dan tidak bisa dikembalikan.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setPendingDelete(null)}
+                style={{
+                  flex: 1,
+                  padding: 11,
+                  borderRadius: 100,
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  border: "1px solid var(--line)",
+                  background: "none",
+                  color: "var(--ink)",
+                }}
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  padding: 11,
+                  borderRadius: 100,
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  border: "none",
+                  background: "var(--danger)",
+                  color: "#fff",
+                }}
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
