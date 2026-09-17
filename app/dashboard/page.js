@@ -42,6 +42,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [revealId, setRevealId] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +54,19 @@ export default function DashboardPage() {
       if (!user) {
         router.push("/login");
         return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setIsPremium(profile.is_premium);
+      } else {
+        // profil belum ada (user lama sebelum fitur ini) -> buat baru
+        await supabase.from("profiles").insert({ id: user.id, is_premium: false });
       }
 
       const { data, error } = await supabase
@@ -65,6 +80,15 @@ export default function DashboardPage() {
     }
     load();
   }, [router]);
+
+  async function activatePremium() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await supabase.from("profiles").update({ is_premium: true, updated_at: new Date().toISOString() }).eq("id", user.id);
+    setIsPremium(true);
+    setShowUpgrade(false);
+  }
 
   async function createBoard() {
     const {
@@ -112,11 +136,73 @@ export default function DashboardPage() {
     <div className="dash-wrap">
       <div className="dash-top">
         <h1>Board saya</h1>
-        <button className="icon-btn" onClick={createBoard} aria-label="Board baru">
-          +
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {isPremium ? (
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "#B9832A",
+                background: "rgba(217,164,65,0.15)",
+                padding: "6px 12px",
+                borderRadius: 100,
+              }}
+            >
+              ✓ Premium
+            </span>
+          ) : (
+            <button
+              onClick={() => setShowUpgrade(true)}
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "#fff",
+                background: "var(--gold)",
+                border: "none",
+                padding: "8px 14px",
+                borderRadius: 100,
+                cursor: "pointer",
+              }}
+            >
+              Upgrade Premium
+            </button>
+          )}
+          <button className="icon-btn" onClick={createBoard} aria-label="Board baru">
+            +
+          </button>
+        </div>
       </div>
       <p className="dash-count">{boards.length} board tersimpan</p>
+
+      {showUpgrade && (
+        <div
+          onClick={() => setShowUpgrade(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(36,28,51,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "var(--panel)", borderRadius: 20, maxWidth: 340, width: "100%", padding: "30px 26px", textAlign: "center" }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(217,164,65,0.16)", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+              ✨
+            </div>
+            <h1 style={{ fontSize: 19, marginBottom: 8 }}>Upgrade ke Premium</h1>
+            <p style={{ fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.55, marginBottom: 20 }}>
+              Unduh board tanpa watermark, resolusi tinggi, board tanpa batas.
+              <br />
+              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                (Mode simulasi — pembayaran asli belum terhubung)
+              </span>
+            </p>
+            <button className="btn-primary" onClick={activatePremium} style={{ marginBottom: 10 }}>
+              Aktifkan Premium
+            </button>
+            <button className="btn-outline" onClick={() => setShowUpgrade(false)}>
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
 
       {boards.length === 0 ? (
         <div className="empty-state">
