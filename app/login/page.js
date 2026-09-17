@@ -58,6 +58,11 @@ export default function LoginPage() {
               placeholder="Kata sandi"
               required
             />
+            <p style={{ textAlign: "right", marginTop: 6 }}>
+              <Link href="/forgot-password" style={{ fontSize: 13, color: "var(--plum)", textDecoration: "none" }}>
+                Lupa kata sandi?
+              </Link>
+            </p>
           </div>
 
           {error && <p className="error-text">{error}</p>}
