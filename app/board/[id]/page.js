@@ -33,6 +33,7 @@ export default function BoardEditorPage() {
   const [title, setTitle] = useState("Board baru");
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [panelId, setPanelId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -77,6 +78,7 @@ export default function BoardEditorPage() {
   }, [boardId, router]);
 
   const selectedCard = cards.find((c) => c.id === selectedId);
+  const panelCard = cards.find((c) => c.id === panelId);
 
   function updateCard(id, patch) {
     setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -171,6 +173,8 @@ export default function BoardEditorPage() {
       }
     }
     function onUp() {
+      const activeId = dragState.current?.id || rotateState.current?.id;
+      if (activeId) setPanelId(activeId);
       dragState.current = null;
       rotateState.current = null;
     }
@@ -258,8 +262,8 @@ export default function BoardEditorPage() {
       </div>
 
       <div className="editor-body">
-        <div className="canvas-area" onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
-          <div ref={canvasRef} className="canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+        <div className="canvas-area" onPointerDown={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); setPanelId(null); } }}>
+          <div ref={canvasRef} className="canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); setPanelId(null); } }}>
             <div className="watermark">dibuat dengan Selaras</div>
 
             {cards.map((card) => (
@@ -272,26 +276,32 @@ export default function BoardEditorPage() {
                   top: card.y,
                   width: card.width,
                   height: card.height,
-                  background: card.type === "image" ? "#E7D9C7" : card.color,
                   transform: `rotate(${card.rotation}deg)`,
-                  padding: card.type === "image" ? 0 : 14,
                 }}
               >
-                {card.type === "text" && (
-                  <p className="card-text" style={{ color: card.textLight ? "#F3E9D8" : "#241C33" }}>
-                    {card.text}
-                  </p>
-                )}
+                <div
+                  className="card-fill"
+                  style={{
+                    background: card.type === "image" ? "#E7D9C7" : card.color,
+                    padding: card.type === "image" ? 0 : 14,
+                  }}
+                >
+                  {card.type === "text" && (
+                    <p className="card-text" style={{ color: card.textLight ? "#F3E9D8" : "#241C33" }}>
+                      {card.text}
+                    </p>
+                  )}
 
-                {card.type === "image" && card.uploading && <span className="card-status">Mengunggah...</span>}
-                {card.type === "image" && card.uploadError && <span className="card-status error">Gagal unggah</span>}
-                {card.type === "image" && card.imageUrl && (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
-                    {card.caption && <div className="card-caption">{card.caption}</div>}
-                  </>
-                )}
+                  {card.type === "image" && card.uploading && <span className="card-status">Mengunggah...</span>}
+                  {card.type === "image" && card.uploadError && <span className="card-status error">Gagal unggah</span>}
+                  {card.type === "image" && card.imageUrl && (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
+                      {card.caption && <div className="card-caption">{card.caption}</div>}
+                    </>
+                  )}
+                </div>
 
                 {selectedId === card.id && (
                   <>
@@ -308,43 +318,43 @@ export default function BoardEditorPage() {
           </div>
         </div>
 
-        {selectedCard && (
+        {panelCard && (
           <>
-            <div className="panel-veil" onClick={() => setSelectedId(null)} />
+            <div className="panel-veil" onClick={() => { setSelectedId(null); setPanelId(null); }} />
             <div className="side-panel">
               <div className="panel-handle" />
-              <button className="panel-close" onClick={() => setSelectedId(null)}>Selesai</button>
+              <button className="panel-close" onClick={() => { setSelectedId(null); setPanelId(null); }}>Selesai</button>
 
-              {selectedCard.type !== "image" && (
+              {panelCard.type !== "image" && (
                 <div className="panel-section">
                   <p className="panel-label">Warna kotak</p>
                   <div className="swatch-row">
                     {COLORS.map((c) => (
                       <div
                         key={c}
-                        className={"swatch" + (selectedCard.color === c ? " active" : "")}
+                        className={"swatch" + (panelCard.color === c ? " active" : "")}
                         style={{ background: c }}
-                        onClick={() => updateCard(selectedCard.id, { color: c })}
+                        onClick={() => updateCard(panelCard.id, { color: c })}
                       />
                     ))}
                   </div>
                 </div>
               )}
 
-              {selectedCard.type === "text" && (
+              {panelCard.type === "text" && (
                 <>
                   <div className="panel-section">
                     <p className="panel-label">Warna teks</p>
                     <div className="toggle-row">
                       <button
-                        className={"toggle-btn" + (selectedCard.textLight ? " active" : "")}
-                        onClick={() => updateCard(selectedCard.id, { textLight: true })}
+                        className={"toggle-btn" + (panelCard.textLight ? " active" : "")}
+                        onClick={() => updateCard(panelCard.id, { textLight: true })}
                       >
                         Krem
                       </button>
                       <button
-                        className={"toggle-btn" + (!selectedCard.textLight ? " active" : "")}
-                        onClick={() => updateCard(selectedCard.id, { textLight: false })}
+                        className={"toggle-btn" + (!panelCard.textLight ? " active" : "")}
+                        onClick={() => updateCard(panelCard.id, { textLight: false })}
                       >
                         Gelap
                       </button>
@@ -354,21 +364,21 @@ export default function BoardEditorPage() {
                     <p className="panel-label">Teks</p>
                     <textarea
                       className="panel-textarea"
-                      value={selectedCard.text}
-                      onChange={(e) => updateCard(selectedCard.id, { text: e.target.value })}
+                      value={panelCard.text}
+                      onChange={(e) => updateCard(panelCard.id, { text: e.target.value })}
                     />
                   </div>
                 </>
               )}
 
-              {selectedCard.type === "image" && (
+              {panelCard.type === "image" && (
                 <div className="panel-section">
                   <p className="panel-label">Teks di atas foto (opsional)</p>
                   <textarea
                     className="panel-textarea"
                     placeholder="Misal: satu langkah setiap hari"
-                    value={selectedCard.caption}
-                    onChange={(e) => updateCard(selectedCard.id, { caption: e.target.value })}
+                    value={panelCard.caption}
+                    onChange={(e) => updateCard(panelCard.id, { caption: e.target.value })}
                   />
                 </div>
               )}
@@ -484,16 +494,23 @@ export default function BoardEditorPage() {
           cursor: grab;
           user-select: none;
           box-shadow: 0 10px 24px -12px rgba(36, 28, 51, 0.25);
-          border: 2px solid transparent;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
           touch-action: none;
         }
         .board-card.selected {
-          border-color: var(--plum);
           box-shadow: 0 16px 32px -14px rgba(36, 28, 51, 0.35);
+        }
+        .card-fill {
+          position: absolute;
+          inset: 0;
+          border-radius: 12px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid transparent;
+        }
+        .board-card.selected .card-fill {
+          border-color: var(--plum);
         }
         .card-text {
           font-family: "Fraunces", serif;
