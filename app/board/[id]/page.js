@@ -46,6 +46,7 @@ export default function BoardEditorPage() {
   const [exporting, setExporting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [user, setUser] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [toast, setToast] = useState("");
 
@@ -69,6 +70,13 @@ export default function BoardEditorPage() {
         return;
       }
       setUser(authUser);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", authUser.id)
+        .single();
+      setIsPremium(profile?.is_premium || false);
 
       const { data, error } = await supabase
         .from("boards")
@@ -300,10 +308,41 @@ export default function BoardEditorPage() {
     setExporting(true);
     await new Promise((resolve) => setTimeout(resolve, 80));
     try {
-      const dataUrl = await toPng(canvasRef.current, { pixelRatio: 2, cacheBust: true });
+      const rawDataUrl = await toPng(canvasRef.current, { pixelRatio: 2, cacheBust: true });
+
+      let finalDataUrl = rawDataUrl;
+
+      if (!isPremium) {
+        // Watermark digambar langsung ke piksel di sini, bukan sebagai elemen HTML,
+        // supaya tidak bisa dihilangkan lewat inspect element di browser.
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = rawDataUrl;
+        });
+
+        const outCanvas = document.createElement("canvas");
+        outCanvas.width = img.width;
+        outCanvas.height = img.height;
+        const ctx = outCanvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        const fontSize = Math.max(18, Math.round(img.width * 0.024));
+        ctx.font = `italic ${fontSize}px Georgia, serif`;
+        ctx.fillStyle = "rgba(36, 28, 51, 0.45)";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        const margin = fontSize * 0.9;
+        ctx.fillText("dibuat dengan Selaras", img.width - margin, img.height - margin);
+
+        finalDataUrl = outCanvas.toDataURL("image/png");
+      }
+
       const link = document.createElement("a");
       link.download = `${(title || "board").replace(/\s+/g, "-").toLowerCase()}.png`;
-      link.href = dataUrl;
+      link.href = finalDataUrl;
       link.click();
     } catch (err) {
       setToast("Gagal mengunduh board. Coba lagi ya.");
@@ -359,8 +398,6 @@ export default function BoardEditorPage() {
       <div className="editor-body">
         <div className="canvas-area" onPointerDown={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); setPanelId(null); } }}>
           <div ref={canvasRef} className="canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); setPanelId(null); } }}>
-            <div className="watermark">dibuat dengan Selaras</div>
-
             {cards.map((card) => (
               <div
                 key={card.id}
@@ -627,15 +664,6 @@ export default function BoardEditorPage() {
           box-shadow: 0 20px 50px -30px rgba(36, 28, 51, 0.3);
           flex-shrink: 0;
           touch-action: none;
-        }
-        .watermark {
-          position: absolute;
-          bottom: 10px;
-          right: 12px;
-          font-size: 10.5px;
-          color: rgba(36, 28, 51, 0.35);
-          pointer-events: none;
-          z-index: 1;
         }
         .board-card {
           position: absolute;
