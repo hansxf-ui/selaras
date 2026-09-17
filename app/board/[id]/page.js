@@ -98,12 +98,18 @@ export default function BoardEditorPage() {
     setCards((prev) => [...prev, card]);
     setSelectedId(card.id);
 
-    const ext = file.name.split(".").pop();
+    const mimeExt = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+    const ext = mimeExt[file.type] || (file.name.includes(".") ? file.name.split(".").pop() : "jpg");
     const path = `${user.id}/${card.id}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("board-images")
-      .upload(path, file, { upsert: true });
+      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
 
     if (uploadError) {
       updateCard(card.id, { uploading: false, uploadError: true });
