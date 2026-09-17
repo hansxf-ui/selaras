@@ -329,13 +329,28 @@ export default function BoardEditorPage() {
         const ctx = outCanvas.getContext("2d");
         ctx.drawImage(img, 0, 0);
 
-        const fontSize = Math.max(18, Math.round(img.width * 0.024));
+        // watermark diulang miring ke seluruh gambar, bukan cuma satu pojok,
+        // supaya tidak bisa dihilangkan dengan crop tanpa ikut memotong isi foto
+        const fontSize = Math.max(15, Math.round(img.width * 0.018));
         ctx.font = `italic ${fontSize}px Georgia, serif`;
-        ctx.fillStyle = "rgba(36, 28, 51, 0.45)";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "bottom";
-        const margin = fontSize * 0.9;
-        ctx.fillText("dibuat dengan Selaras", img.width - margin, img.height - margin);
+        ctx.fillStyle = "rgba(36, 28, 51, 0.16)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const text = "Selaras";
+        const stepX = fontSize * 9;
+        const stepY = fontSize * 6;
+
+        ctx.save();
+        ctx.rotate((-18 * Math.PI) / 180);
+        // area rotasi diperluas biar tetap nutupin seluruh kanvas sampai ke pojok
+        const span = Math.hypot(img.width, img.height);
+        for (let y = -span; y < span; y += stepY) {
+          for (let x = -span; x < span; x += stepX) {
+            ctx.fillText(text, x, y);
+          }
+        }
+        ctx.restore();
 
         finalDataUrl = outCanvas.toDataURL("image/png");
       }
