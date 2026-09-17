@@ -11,14 +11,16 @@ function makeCard(type, extra = {}) {
   return {
     id: crypto.randomUUID(),
     type, // "text", "color", or "image"
-    x: 40 + Math.random() * 120,
-    y: 40 + Math.random() * 120,
-    width: type === "text" ? 170 : 150,
-    height: type === "text" ? 130 : 150,
+    x: 30 + Math.random() * 100,
+    y: 30 + Math.random() * 100,
+    width: type === "text" ? 170 : type === "image" ? 190 : 150,
+    height: type === "text" ? 130 : type === "image" ? 220 : 150,
     rotation: 0,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
     text: type === "text" ? "kata baru" : "",
+    textLight: true, // teks krem (terang) vs gelap
     imageUrl: null,
+    caption: "",
     ...extra,
   };
 }
@@ -36,9 +38,9 @@ export default function BoardEditorPage() {
   const [exporting, setExporting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [user, setUser] = useState(null);
-  const fileInputRef = useRef(null);
 
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const dragState = useRef(null);
   const rotateState = useRef(null);
 
@@ -86,6 +88,11 @@ export default function BoardEditorPage() {
     setSelectedId(card.id);
   }
 
+  function deleteCard(id) {
+    setCards((prev) => prev.filter((c) => c.id !== id));
+    if (selectedId === id) setSelectedId(null);
+  }
+
   function triggerImagePicker() {
     fileInputRef.current?.click();
   }
@@ -95,17 +102,11 @@ export default function BoardEditorPage() {
     e.target.value = "";
     if (!file || !user) return;
 
-    // Tampilkan kartu langsung dengan status "mengunggah" sambil upload jalan
-    const card = makeCard("image", { width: 190, height: 220, uploading: true });
+    const card = makeCard("image", { uploading: true });
     setCards((prev) => [...prev, card]);
     setSelectedId(card.id);
 
-    const mimeExt = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "image/gif": "gif",
-    };
+    const mimeExt = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
     const ext = mimeExt[file.type] || (file.name.includes(".") ? file.name.split(".").pop() : "jpg");
     const path = `${user.id}/${card.id}.${ext}`;
 
@@ -122,13 +123,10 @@ export default function BoardEditorPage() {
     updateCard(card.id, { imageUrl: data.publicUrl, uploading: false });
   }
 
-  function deleteCard(id) {
-    setCards((prev) => prev.filter((c) => c.id !== id));
-    if (selectedId === id) setSelectedId(null);
-  }
+  // ---------- drag & rotate (pointer events = mouse + touch dalam satu jalur) ----------
 
-  function onDragStart(e, card) {
-    if (e.target.closest(".del") || e.target.closest(".rotate-handle")) return;
+  function onCardPointerDown(e, card) {
+    if (e.target.closest(".ctrl-btn")) return;
     setSelectedId(card.id);
     const canvasRect = canvasRef.current.getBoundingClientRect();
     dragState.current = {
@@ -136,10 +134,10 @@ export default function BoardEditorPage() {
       offsetX: e.clientX - canvasRect.left - card.x,
       offsetY: e.clientY - canvasRect.top - card.y,
     };
-    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
-  function onRotateStart(e, card) {
+  function onRotatePointerDown(e, card) {
     e.stopPropagation();
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const centerX = canvasRect.left + card.x + card.width / 2;
@@ -147,7 +145,8 @@ export default function BoardEditorPage() {
     const startAngle = (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
     rotateState.current = { id: card.id, centerX, centerY, startAngle, startRotation: card.rotation };
     setSelectedId(card.id);
-    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    e.stopPropagation();
   }
 
   useEffect(() => {
@@ -155,10 +154,14 @@ export default function BoardEditorPage() {
       if (dragState.current) {
         const { id, offsetX, offsetY } = dragState.current;
         const canvasRect = canvasRef.current.getBoundingClientRect();
+        const card = cards.find((c) => c.id === id);
+        if (!card) return;
         let x = e.clientX - canvasRect.left - offsetX;
         let y = e.clientY - canvasRect.top - offsetY;
-        x = Math.max(0, Math.min(x, canvasRect.width - 40));
-        y = Math.max(0, Math.min(y, canvasRect.height - 40));
+        // beri sedikit ruang lewat tepi biar terasa bebas, tapi kartu nggak hilang sepenuhnya
+        const margin = 40;
+        x = Math.max(-margin, Math.min(x, canvasRect.width - card.width + margin));
+        y = Math.max(-margin, Math.min(y, canvasRect.height - card.height + margin));
         updateCard(id, { x, y });
       }
       if (rotateState.current) {
@@ -171,13 +174,17 @@ export default function BoardEditorPage() {
       dragState.current = null;
       rotateState.current = null;
     }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
-  }, []);
+  }, [cards]);
+
+  // ---------- save / export / delete ----------
 
   async function saveBoard() {
     setSaving(true);
@@ -191,14 +198,9 @@ export default function BoardEditorPage() {
   async function exportBoard() {
     setSelectedId(null);
     setExporting(true);
-    // beri jeda sedikit biar tombol hapus/rotate yang lagi tampil sempat hilang dari layar sebelum di-capture
     await new Promise((resolve) => setTimeout(resolve, 80));
-
     try {
-      const dataUrl = await toPng(canvasRef.current, {
-        pixelRatio: 2,
-        cacheBust: true,
-      });
+      const dataUrl = await toPng(canvasRef.current, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement("a");
       link.download = `${(title || "board").replace(/\s+/g, "-").toLowerCase()}.png`;
       link.href = dataUrl;
@@ -206,23 +208,25 @@ export default function BoardEditorPage() {
     } catch (err) {
       alert("Gagal mengunduh board. Coba lagi ya.");
     }
-
     setExporting(false);
   }
 
+  async function deleteBoard() {
+    const sure = window.confirm(`Hapus board "${title}"? Tindakan ini tidak bisa dibatalkan.`);
+    if (!sure) return;
+    await supabase.from("boards").delete().eq("id", boardId);
+    router.push("/dashboard");
+  }
+
   if (loading) {
-    return (
-      <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft)" }}>
-        Memuat board...
-      </div>
-    );
+    return <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft)" }}>Memuat board...</div>;
   }
 
   if (notFound) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
         <p className="subtitle">Board tidak ditemukan.</p>
-        <button className="btn-primary" onClick={() => router.push("/dashboard")}>
+        <button className="btn-primary" style={{ maxWidth: 220, margin: "0 auto" }} onClick={() => router.push("/dashboard")}>
           Kembali ke Board saya
         </button>
       </div>
@@ -230,267 +234,73 @@ export default function BoardEditorPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* top bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--line)",
-          background: "var(--panel)",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <button
-            onClick={() => router.push("/dashboard")}
-            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 18, color: "var(--ink-soft)" }}
-            aria-label="Kembali"
-          >
+    <div className="editor-shell">
+      <div className="editor-top">
+        <div className="editor-top-left">
+          <button className="icon-plain" onClick={() => router.push("/dashboard")} aria-label="Kembali">
             ←
           </button>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{
-              border: "none",
-              background: "none",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "var(--ink)",
-              maxWidth: 160,
-            }}
-          />
+          <input className="title-input" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={onImageSelected}
-            style={{ display: "none" }}
-          />
-          <button
-            onClick={triggerImagePicker}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 100,
-              border: "1px solid var(--line)",
-              background: "none",
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            + Gambar
+        <div className="editor-top-right">
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={onImageSelected} style={{ display: "none" }} />
+          <button className="chip-btn" onClick={triggerImagePicker}>+ Foto</button>
+          <button className="chip-btn" onClick={() => addCard("text")}>+ Teks</button>
+          <button className="chip-btn" onClick={() => addCard("color")}>+ Kotak warna</button>
+          <button className="chip-btn" onClick={exportBoard} disabled={exporting}>
+            {exporting ? "..." : "Unduh"}
           </button>
-          <button
-            onClick={() => addCard("text")}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 100,
-              border: "1px solid var(--line)",
-              background: "none",
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            + Teks
-          </button>
-          <button
-            onClick={() => addCard("color")}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 100,
-              border: "1px solid var(--line)",
-              background: "none",
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            + Warna
-          </button>
-          <button
-            onClick={exportBoard}
-            disabled={exporting}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 100,
-              border: "1px solid var(--line)",
-              background: "none",
-              color: "var(--ink)",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            {exporting ? "Menyiapkan..." : "Unduh"}
-          </button>
-          <button
-            onClick={saveBoard}
-            disabled={saving}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 100,
-              border: "none",
-              background: "var(--plum)",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            {saving ? "Menyimpan..." : "Simpan"}
+          <button className="chip-btn chip-danger" onClick={deleteBoard}>Hapus</button>
+          <button className="chip-btn chip-primary" onClick={saveBoard} disabled={saving}>
+            {saving ? "..." : "Simpan"}
           </button>
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex" }}>
-        {/* canvas */}
-        <div
-          style={{
-            flex: 1,
-            background: "#F1ECE6",
-            padding: 24,
-            overflow: "auto",
-            display: "flex",
-            justifyContent: "center",
-          }}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedId(null);
-          }}
-        >
-          <div
-            ref={canvasRef}
-            style={{
-              position: "relative",
-              width: 340,
-              minHeight: 480,
-              background: "var(--panel)",
-              borderRadius: 16,
-              boxShadow: "0 20px 50px -30px rgba(36,28,51,0.3)",
-              flexShrink: 0,
-            }}
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) setSelectedId(null);
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                bottom: 10,
-                right: 12,
-                fontSize: 10.5,
-                color: "rgba(36,28,51,0.35)",
-                fontFamily: "Inter, sans-serif",
-                pointerEvents: "none",
-                zIndex: 1,
-              }}
-            >
-              dibuat dengan Selaras
-            </div>
+      <div className="editor-body">
+        <div className="canvas-area" onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+          <div ref={canvasRef} className="canvas" onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}>
+            <div className="watermark">dibuat dengan Selaras</div>
+
             {cards.map((card) => (
               <div
                 key={card.id}
-                onMouseDown={(e) => onDragStart(e, card)}
+                onPointerDown={(e) => onCardPointerDown(e, card)}
+                className={"board-card" + (selectedId === card.id ? " selected" : "")}
                 style={{
-                  position: "absolute",
                   left: card.x,
                   top: card.y,
                   width: card.width,
                   height: card.height,
                   background: card.type === "image" ? "#E7D9C7" : card.color,
-                  borderRadius: 12,
-                  cursor: "grab",
                   transform: `rotate(${card.rotation}deg)`,
-                  boxShadow: "0 10px 24px -12px rgba(36,28,51,0.25)",
-                  border: selectedId === card.id ? "2px solid var(--plum)" : "2px solid transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   padding: card.type === "image" ? 0 : 14,
-                  userSelect: "none",
-                  overflow: "hidden",
                 }}
               >
                 {card.type === "text" && (
-                  <p
-                    style={{
-                      fontFamily: "Fraunces, serif",
-                      fontStyle: "italic",
-                      color: "#F3E9D8",
-                      fontSize: 14,
-                      textAlign: "center",
-                      margin: 0,
-                    }}
-                  >
+                  <p className="card-text" style={{ color: card.textLight ? "#F3E9D8" : "#241C33" }}>
                     {card.text}
                   </p>
                 )}
 
-                {card.type === "image" && card.uploading && (
-                  <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>Mengunggah...</span>
-                )}
-                {card.type === "image" && card.uploadError && (
-                  <span style={{ fontSize: 12, color: "#B3443A", padding: 10, textAlign: "center" }}>
-                    Gagal unggah
-                  </span>
-                )}
+                {card.type === "image" && card.uploading && <span className="card-status">Mengunggah...</span>}
+                {card.type === "image" && card.uploadError && <span className="card-status error">Gagal unggah</span>}
                 {card.type === "image" && card.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={card.imageUrl}
-                    alt=""
-                    draggable={false}
-                    crossOrigin="anonymous"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
+                    {card.caption && <div className="card-caption">{card.caption}</div>}
+                  </>
                 )}
 
                 {selectedId === card.id && (
                   <>
-                    <div
-                      className="del"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCard(card.id);
-                      }}
-                      style={{
-                        position: "absolute",
-                        top: 6,
-                        right: 6,
-                        width: 22,
-                        height: 22,
-                        borderRadius: "50%",
-                        background: "rgba(36,28,51,0.65)",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 12,
-                        cursor: "pointer",
-                      }}
-                    >
+                    <div className="ctrl-btn del-btn" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}>
                       ×
                     </div>
-                    <div
-                      className="rotate-handle"
-                      onMouseDown={(e) => onRotateStart(e, card)}
-                      style={{
-                        position: "absolute",
-                        top: -30,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        background: "var(--plum)",
-                        cursor: "grab",
-                        boxShadow: "0 4px 10px rgba(36,28,51,0.3)",
-                      }}
-                    />
+                    <div className="ctrl-btn rotate-btn" onPointerDown={(e) => onRotatePointerDown(e, card)}>
+                      ↻
+                    </div>
                   </>
                 )}
               </div>
@@ -498,67 +308,384 @@ export default function BoardEditorPage() {
           </div>
         </div>
 
-        {/* side panel */}
         {selectedCard && (
-          <div
-            style={{
-              width: 200,
-              borderLeft: "1px solid var(--line)",
-              background: "var(--panel)",
-              padding: 18,
-              flexShrink: 0,
-            }}
-          >
-            <p style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-soft)", marginBottom: 12 }}>
-              Warna
-            </p>
-            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-              {selectedCard.type !== "image" &&
-                COLORS.map((c) => (
-                  <div
-                    key={c}
-                    onClick={() => updateCard(selectedCard.id, { color: c })}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: c,
-                      cursor: "pointer",
-                      border: selectedCard.color === c ? "2px solid var(--ink)" : "2px solid transparent",
-                    }}
-                  />
-                ))}
+          <>
+            <div className="panel-veil" onClick={() => setSelectedId(null)} />
+            <div className="side-panel">
+              <div className="panel-handle" />
+              <button className="panel-close" onClick={() => setSelectedId(null)}>Selesai</button>
+
+              {selectedCard.type !== "image" && (
+                <div className="panel-section">
+                  <p className="panel-label">Warna kotak</p>
+                  <div className="swatch-row">
+                    {COLORS.map((c) => (
+                      <div
+                        key={c}
+                        className={"swatch" + (selectedCard.color === c ? " active" : "")}
+                        style={{ background: c }}
+                        onClick={() => updateCard(selectedCard.id, { color: c })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedCard.type === "text" && (
+                <>
+                  <div className="panel-section">
+                    <p className="panel-label">Warna teks</p>
+                    <div className="toggle-row">
+                      <button
+                        className={"toggle-btn" + (selectedCard.textLight ? " active" : "")}
+                        onClick={() => updateCard(selectedCard.id, { textLight: true })}
+                      >
+                        Krem
+                      </button>
+                      <button
+                        className={"toggle-btn" + (!selectedCard.textLight ? " active" : "")}
+                        onClick={() => updateCard(selectedCard.id, { textLight: false })}
+                      >
+                        Gelap
+                      </button>
+                    </div>
+                  </div>
+                  <div className="panel-section">
+                    <p className="panel-label">Teks</p>
+                    <textarea
+                      className="panel-textarea"
+                      value={selectedCard.text}
+                      onChange={(e) => updateCard(selectedCard.id, { text: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+
               {selectedCard.type === "image" && (
-                <p style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
-                  Ganti gambar dengan menghapus lalu unggah ulang.
-                </p>
+                <div className="panel-section">
+                  <p className="panel-label">Teks di atas foto (opsional)</p>
+                  <textarea
+                    className="panel-textarea"
+                    placeholder="Misal: satu langkah setiap hari"
+                    value={selectedCard.caption}
+                    onChange={(e) => updateCard(selectedCard.id, { caption: e.target.value })}
+                  />
+                </div>
               )}
             </div>
-
-            {selectedCard.type === "text" && (
-              <div>
-                <label style={{ fontSize: 12, color: "var(--ink-soft)", display: "block", marginBottom: 6 }}>
-                  Teks
-                </label>
-                <textarea
-                  value={selectedCard.text}
-                  onChange={(e) => updateCard(selectedCard.id, { text: e.target.value })}
-                  style={{
-                    width: "100%",
-                    height: 70,
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    padding: 10,
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: 13,
-                    resize: "none",
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          </>
         )}
       </div>
+
+      <style jsx>{`
+        .editor-shell {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        .editor-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 14px;
+          border-bottom: 1px solid var(--line);
+          background: var(--panel);
+          flex-wrap: wrap;
+        }
+        .editor-top-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+        .icon-plain {
+          border: none;
+          background: none;
+          font-size: 18px;
+          color: var(--ink-soft);
+          cursor: pointer;
+          padding: 4px;
+        }
+        .title-input {
+          border: none;
+          background: none;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--ink);
+          max-width: 140px;
+          font-family: inherit;
+        }
+        .title-input:focus {
+          outline: none;
+        }
+        .editor-top-right {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .chip-btn {
+          padding: 8px 12px;
+          border-radius: 100px;
+          border: 1px solid var(--line);
+          background: none;
+          font-size: 12.5px;
+          font-weight: 500;
+          color: var(--ink);
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .chip-primary {
+          background: var(--plum);
+          color: #fff;
+          border: none;
+        }
+        .chip-danger {
+          color: var(--danger);
+          border-color: rgba(179, 68, 58, 0.3);
+        }
+        .editor-body {
+          flex: 1;
+          display: flex;
+          position: relative;
+          overflow: hidden;
+        }
+        .canvas-area {
+          flex: 1;
+          background: var(--canvas);
+          padding: 20px;
+          overflow: auto;
+          display: flex;
+          justify-content: center;
+          touch-action: none;
+        }
+        .canvas {
+          position: relative;
+          width: 340px;
+          min-height: 480px;
+          background: var(--panel);
+          border-radius: 16px;
+          box-shadow: 0 20px 50px -30px rgba(36, 28, 51, 0.3);
+          flex-shrink: 0;
+          touch-action: none;
+        }
+        .watermark {
+          position: absolute;
+          bottom: 10px;
+          right: 12px;
+          font-size: 10.5px;
+          color: rgba(36, 28, 51, 0.35);
+          pointer-events: none;
+          z-index: 1;
+        }
+        .board-card {
+          position: absolute;
+          border-radius: 12px;
+          cursor: grab;
+          user-select: none;
+          box-shadow: 0 10px 24px -12px rgba(36, 28, 51, 0.25);
+          border: 2px solid transparent;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          touch-action: none;
+        }
+        .board-card.selected {
+          border-color: var(--plum);
+          box-shadow: 0 16px 32px -14px rgba(36, 28, 51, 0.35);
+        }
+        .card-text {
+          font-family: "Fraunces", serif;
+          font-style: italic;
+          font-size: 14px;
+          text-align: center;
+          margin: 0;
+        }
+        .card-status {
+          font-size: 12px;
+          color: var(--ink-soft);
+        }
+        .card-status.error {
+          color: var(--danger);
+        }
+        .card-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          pointer-events: none;
+        }
+        .card-caption {
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(36, 28, 51, 0.55);
+          color: #f3e9d8;
+          font-family: "Fraunces", serif;
+          font-style: italic;
+          font-size: 12.5px;
+          text-align: center;
+          padding: 8px 10px;
+        }
+        .ctrl-btn {
+          position: absolute;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          cursor: pointer;
+          z-index: 5;
+          box-shadow: 0 4px 10px rgba(36, 28, 51, 0.3);
+        }
+        .del-btn {
+          top: -14px;
+          right: -14px;
+          width: 34px;
+          height: 34px;
+          background: rgba(36, 28, 51, 0.75);
+          color: #fff;
+          font-size: 16px;
+          touch-action: none;
+        }
+        .rotate-btn {
+          top: -18px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 34px;
+          height: 34px;
+          background: var(--plum);
+          color: #fff;
+          font-size: 15px;
+          cursor: grab;
+          touch-action: none;
+        }
+
+        /* ---------- side panel: docked on wide screens, bottom sheet on mobile ---------- */
+        .panel-veil {
+          display: none;
+        }
+        .side-panel {
+          width: 220px;
+          border-left: 1px solid var(--line);
+          background: var(--panel);
+          padding: 18px;
+          flex-shrink: 0;
+          overflow-y: auto;
+        }
+        .panel-handle,
+        .panel-close {
+          display: none;
+        }
+        .panel-section {
+          margin-bottom: 20px;
+        }
+        .panel-label {
+          font-size: 12.5px;
+          font-weight: 500;
+          color: var(--ink-soft);
+          margin: 0 0 10px;
+        }
+        .swatch-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .swatch {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid transparent;
+        }
+        .swatch.active {
+          border-color: var(--ink);
+        }
+        .toggle-row {
+          display: flex;
+          gap: 8px;
+        }
+        .toggle-btn {
+          flex: 1;
+          padding: 8px;
+          border-radius: 10px;
+          border: 1px solid var(--line);
+          background: none;
+          font-size: 12.5px;
+          cursor: pointer;
+          color: var(--ink);
+        }
+        .toggle-btn.active {
+          background: var(--ink);
+          color: var(--bg);
+          border-color: var(--ink);
+        }
+        .panel-textarea {
+          width: 100%;
+          height: 80px;
+          border: 1px solid var(--line);
+          border-radius: 10px;
+          padding: 10px;
+          font-family: "Inter", sans-serif;
+          font-size: 13px;
+          resize: none;
+          color: var(--ink);
+          background: var(--panel);
+        }
+        .panel-textarea:focus {
+          outline: none;
+          border-color: var(--plum);
+        }
+
+        @media (max-width: 760px) {
+          .editor-top-right {
+            justify-content: flex-end;
+          }
+          .canvas-area {
+            padding: 16px 12px 100px;
+          }
+          .panel-veil {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(36, 28, 51, 0.35);
+            z-index: 20;
+          }
+          .side-panel {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: auto;
+            width: 100%;
+            max-height: 55vh;
+            border-left: none;
+            border-top: 1px solid var(--line);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.15);
+            padding: 12px 18px 24px;
+            z-index: 21;
+          }
+          .panel-handle {
+            display: block;
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--line);
+            margin: 4px auto 14px;
+          }
+          .panel-close {
+            display: block;
+            margin: 0 auto 16px;
+            border: none;
+            background: none;
+            color: var(--plum);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+          }
+        }
+      `}</style>
     </div>
   );
 }
