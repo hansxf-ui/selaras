@@ -6,10 +6,10 @@ import { supabase } from "../../../lib/supabaseClient";
 
 const COLORS = ["#6B4E71", "#D9A441", "#C6714F", "#71865F", "#7C93A8"];
 
-function makeCard(type) {
+function makeCard(type, extra = {}) {
   return {
     id: crypto.randomUUID(),
-    type, // "text" or "color"
+    type, // "text", "color", or "image"
     x: 40 + Math.random() * 120,
     y: 40 + Math.random() * 120,
     width: type === "text" ? 170 : 150,
@@ -17,6 +17,8 @@ function makeCard(type) {
     rotation: 0,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
     text: type === "text" ? "kata baru" : "",
+    imageUrl: null,
+    ...extra,
   };
 }
 
@@ -31,6 +33,8 @@ export default function BoardEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [user, setUser] = useState(null);
+  const fileInputRef = useRef(null);
 
   const canvasRef = useRef(null);
   const dragState = useRef(null);
@@ -39,19 +43,20 @@ export default function BoardEditorPage() {
   useEffect(() => {
     async function load() {
       const {
-        data: { user },
+        data: { user: authUser },
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (!authUser) {
         router.push("/login");
         return;
       }
+      setUser(authUser);
 
       const { data, error } = await supabase
         .from("boards")
         .select("*")
         .eq("id", boardId)
-        .eq("user_id", user.id)
+        .eq("user_id", authUser.id)
         .single();
 
       if (error || !data) {
@@ -77,6 +82,36 @@ export default function BoardEditorPage() {
     const card = makeCard(type);
     setCards((prev) => [...prev, card]);
     setSelectedId(card.id);
+  }
+
+  function triggerImagePicker() {
+    fileInputRef.current?.click();
+  }
+
+  async function onImageSelected(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+
+    // Tampilkan kartu langsung dengan status "mengunggah" sambil upload jalan
+    const card = makeCard("image", { width: 190, height: 220, uploading: true });
+    setCards((prev) => [...prev, card]);
+    setSelectedId(card.id);
+
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${card.id}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("board-images")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      updateCard(card.id, { uploading: false, uploadError: true });
+      return;
+    }
+
+    const { data } = supabase.storage.from("board-images").getPublicUrl(path);
+    updateCard(card.id, { imageUrl: data.publicUrl, uploading: false });
   }
 
   function deleteCard(id) {
@@ -201,6 +236,26 @@ export default function BoardEditorPage() {
           />
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={onImageSelected}
+            style={{ display: "none" }}
+          />
+          <button
+            onClick={triggerImagePicker}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 100,
+              border: "1px solid var(--line)",
+              background: "none",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            + Gambar
+          </button>
           <button
             onClick={() => addCard("text")}
             style={{
@@ -286,7 +341,7 @@ export default function BoardEditorPage() {
                   top: card.y,
                   width: card.width,
                   height: card.height,
-                  background: card.color,
+                  background: card.type === "image" ? "#E7D9C7" : card.color,
                   borderRadius: 12,
                   cursor: "grab",
                   transform: `rotate(${card.rotation}deg)`,
@@ -295,8 +350,9 @@ export default function BoardEditorPage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: 14,
+                  padding: card.type === "image" ? 0 : 14,
                   userSelect: "none",
+                  overflow: "hidden",
                 }}
               >
                 {card.type === "text" && (
@@ -312,6 +368,24 @@ export default function BoardEditorPage() {
                   >
                     {card.text}
                   </p>
+                )}
+
+                {card.type === "image" && card.uploading && (
+                  <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>Mengunggah...</span>
+                )}
+                {card.type === "image" && card.uploadError && (
+                  <span style={{ fontSize: 12, color: "#B3443A", padding: 10, textAlign: "center" }}>
+                    Gagal unggah
+                  </span>
+                )}
+                {card.type === "image" && card.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={card.imageUrl}
+                    alt=""
+                    draggable={false}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
+                  />
                 )}
 
                 {selectedId === card.id && (
@@ -378,20 +452,26 @@ export default function BoardEditorPage() {
               Warna
             </p>
             <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-              {COLORS.map((c) => (
-                <div
-                  key={c}
-                  onClick={() => updateCard(selectedCard.id, { color: c })}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    background: c,
-                    cursor: "pointer",
-                    border: selectedCard.color === c ? "2px solid var(--ink)" : "2px solid transparent",
-                  }}
-                />
-              ))}
+              {selectedCard.type !== "image" &&
+                COLORS.map((c) => (
+                  <div
+                    key={c}
+                    onClick={() => updateCard(selectedCard.id, { color: c })}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: c,
+                      cursor: "pointer",
+                      border: selectedCard.color === c ? "2px solid var(--ink)" : "2px solid transparent",
+                    }}
+                  />
+                ))}
+              {selectedCard.type === "image" && (
+                <p style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
+                  Ganti gambar dengan menghapus lalu unggah ulang.
+                </p>
+              )}
             </div>
 
             {selectedCard.type === "text" && (
