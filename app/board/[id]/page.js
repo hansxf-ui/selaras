@@ -399,8 +399,10 @@ export default function BoardEditorPage() {
                   {card.type === "image" && card.uploadError && <span className="card-status error">Gagal unggah</span>}
                   {card.type === "image" && card.imageUrl && (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
+                      <div className="photo-clip">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={card.imageUrl} alt="" draggable={false} crossOrigin="anonymous" className="card-img" />
+                      </div>
                       {card.caption && (
                         <div
                           className="card-caption"
@@ -650,7 +652,6 @@ export default function BoardEditorPage() {
           position: absolute;
           inset: 0;
           border-radius: 12px;
-          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -658,6 +659,12 @@ export default function BoardEditorPage() {
         }
         .board-card.selected .card-fill {
           border-color: var(--plum);
+        }
+        .photo-clip {
+          position: absolute;
+          inset: 0;
+          border-radius: 10px;
+          overflow: hidden;
         }
         .card-text {
           position: absolute;
