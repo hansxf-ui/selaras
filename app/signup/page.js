@@ -28,64 +28,70 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
-
     setDone(true);
   }
 
   if (done) {
     return (
-      <div className="container">
-        <h1>Cek emailmu</h1>
-        <p className="subtitle">
-          Kami mengirim tautan konfirmasi ke {email}. Buka tautan itu untuk
-          mengaktifkan akunmu, lalu masuk.
-        </p>
-        <Link href="/login">
-          <button className="btn-primary">Ke halaman masuk</button>
-        </Link>
+      <div className="page-center">
+        <div className="card-panel" style={{ textAlign: "center" }}>
+          <h1>Cek emailmu</h1>
+          <p className="subtitle">
+            Kami mengirim tautan konfirmasi ke {email}. Buka tautan itu untuk
+            mengaktifkan akunmu, lalu masuk.
+          </p>
+          <Link href="/login">
+            <button className="btn-primary">Ke halaman masuk</button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <h1>Buat board pertamamu</h1>
-      <p className="subtitle">Gratis untuk mulai, tanpa perlu kartu kredit.</p>
-
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="nama@email.com"
-            required
-          />
+    <div className="page-center">
+      <div className="card-panel">
+        <div className="brand" style={{ marginBottom: 24 }}>
+          Selaras
         </div>
-        <div className="field">
-          <label htmlFor="password">Kata sandi</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimal 8 karakter"
-            required
-          />
-        </div>
+        <h1>Buat board pertamamu</h1>
+        <p className="subtitle">Gratis untuk mulai, tanpa perlu kartu kredit.</p>
 
-        {error && <p className="error-text">{error}</p>}
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nama@email.com"
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Kata sandi</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimal 8 karakter"
+              required
+            />
+          </div>
 
-        <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "Memproses..." : "Buat akun"}
-        </button>
-      </form>
+          {error && <p className="error-text">{error}</p>}
 
-      <p className="switch-line">
-        Sudah punya akun? <Link href="/login">Masuk di sini</Link>
-      </p>
+          <button className="btn-primary" type="submit" disabled={loading}>
+            {loading ? "Memproses..." : "Buat akun"}
+          </button>
+        </form>
+
+        <p className="switch-line">
+          Sudah punya akun? <Link href="/login">Masuk di sini</Link>
+        </p>
+      </div>
     </div>
   );
 }
