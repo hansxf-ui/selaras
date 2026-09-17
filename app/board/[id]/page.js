@@ -18,6 +18,8 @@ function makeCard(type, extra = {}) {
     rotation: 0,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
     text: type === "text" ? "kata baru" : "",
+    textXPct: 50,
+    textYPct: 50,
     textLight: true, // teks krem (terang) vs gelap
     imageUrl: null,
     caption: "",
@@ -174,17 +176,19 @@ export default function BoardEditorPage() {
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
-  function onCaptionPointerDown(e, card) {
+  function onInnerTextPointerDown(e, card, xKey, yKey) {
     e.stopPropagation();
     const fillRect = e.currentTarget.parentElement.getBoundingClientRect();
     captionDragState.current = {
       id: card.id,
+      xKey,
+      yKey,
       fillWidth: fillRect.width,
       fillHeight: fillRect.height,
       startX: e.clientX,
       startY: e.clientY,
-      startXPct: card.captionXPct,
-      startYPct: card.captionYPct,
+      startXPct: card[xKey],
+      startYPct: card[yKey],
     };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
@@ -234,12 +238,12 @@ export default function BoardEditorPage() {
         updateCard(id, { width, height });
       }
       if (captionDragState.current) {
-        const { id, fillWidth, fillHeight, startX, startY, startXPct, startYPct } = captionDragState.current;
+        const { id, xKey, yKey, fillWidth, fillHeight, startX, startY, startXPct, startYPct } = captionDragState.current;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-        const captionXPct = Math.max(5, Math.min(95, startXPct + (dx / fillWidth) * 100));
-        const captionYPct = Math.max(5, Math.min(95, startYPct + (dy / fillHeight) * 100));
-        updateCard(id, { captionXPct, captionYPct });
+        const xPct = Math.max(8, Math.min(92, startXPct + (dx / fillWidth) * 100));
+        const yPct = Math.max(8, Math.min(92, startYPct + (dy / fillHeight) * 100));
+        updateCard(id, { [xKey]: xPct, [yKey]: yPct });
       }
       if (captionResizeState.current) {
         const { id, startY, startScale } = captionResizeState.current;
@@ -369,7 +373,15 @@ export default function BoardEditorPage() {
                   }}
                 >
                   {card.type === "text" && (
-                    <p className="card-text" style={{ color: card.textLight ? "#F3E9D8" : "#241C33" }}>
+                    <p
+                      className="card-text"
+                      onPointerDown={(e) => onInnerTextPointerDown(e, card, "textXPct", "textYPct")}
+                      style={{
+                        color: card.textLight ? "#F3E9D8" : "#241C33",
+                        left: `${card.textXPct}%`,
+                        top: `${card.textYPct}%`,
+                      }}
+                    >
                       {card.text}
                     </p>
                   )}
@@ -383,7 +395,7 @@ export default function BoardEditorPage() {
                       {card.caption && (
                         <div
                           className="card-caption"
-                          onPointerDown={(e) => onCaptionPointerDown(e, card)}
+                          onPointerDown={(e) => onInnerTextPointerDown(e, card, "captionXPct", "captionYPct")}
                           style={{
                             left: `${card.captionXPct}%`,
                             top: `${card.captionYPct}%`,
@@ -393,8 +405,13 @@ export default function BoardEditorPage() {
                           {card.caption}
                           {selectedId === card.id && (
                             <>
-                              <div className="caption-handle caption-rotate" onPointerDown={(e) => onCaptionRotatePointerDown(e, card)}>↻</div>
-                              <div className="caption-handle caption-resize" onPointerDown={(e) => onCaptionResizePointerDown(e, card)}>⤡</div>
+                              <div className="caption-handle caption-rotate" onPointerDown={(e) => onCaptionRotatePointerDown(e, card)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7" /><path d="M21 3v6h-6" /></svg>
+                              </div>
+                              <div className="caption-handle caption-resize" onPointerDown={(e) => onCaptionResizePointerDown(e, card)}>
+                                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: -0.5 }}>A</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 1 }}>A</span>
+                              </div>
                             </>
                           )}
                         </div>
@@ -406,16 +423,16 @@ export default function BoardEditorPage() {
                 {selectedId === card.id && (
                   <>
                     <div className="ctrl-btn del-btn" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}>
-                      ×
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
                     </div>
                     <div className="ctrl-btn rotate-btn" onPointerDown={(e) => onRotatePointerDown(e, card)}>
-                      ↻
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7" /><path d="M21 3v6h-6" /></svg>
                     </div>
                     <div className="ctrl-btn edit-btn" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setPanelId(card.id); }}>
-                      ✏️
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
                     </div>
                     <div className="ctrl-btn resize-btn" onPointerDown={(e) => onResizePointerDown(e, card)}>
-                      ⤡
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
                     </div>
                   </>
                 )}
@@ -634,11 +651,16 @@ export default function BoardEditorPage() {
           border-color: var(--plum);
         }
         .card-text {
+          position: absolute;
+          transform: translate(-50%, -50%);
           font-family: "Fraunces", serif;
           font-style: italic;
           font-size: 14px;
           text-align: center;
           margin: 0;
+          max-width: 88%;
+          cursor: grab;
+          touch-action: none;
         }
         .card-status {
           font-size: 12px;
@@ -676,12 +698,15 @@ export default function BoardEditorPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--plum);
-          color: #fff;
-          font-size: 10px;
+          background: #f3e9d8;
+          color: #241c33;
           cursor: pointer;
           touch-action: none;
           box-shadow: 0 3px 8px rgba(36, 28, 51, 0.35);
+        }
+        .caption-handle :global(svg) {
+          width: 11px;
+          height: 11px;
         }
         .caption-rotate {
           top: -24px;
@@ -691,8 +716,8 @@ export default function BoardEditorPage() {
         .caption-resize {
           bottom: -8px;
           right: -8px;
-          background: var(--sage);
           cursor: nwse-resize;
+          padding: 0 1px;
         }
         .ctrl-btn {
           position: absolute;
@@ -703,49 +728,34 @@ export default function BoardEditorPage() {
           cursor: pointer;
           z-index: 5;
           box-shadow: 0 4px 10px rgba(36, 28, 51, 0.3);
-        }
-        .del-btn {
-          top: -14px;
-          right: -14px;
-          width: 34px;
-          height: 34px;
-          background: rgba(36, 28, 51, 0.75);
+          background: rgba(36, 28, 51, 0.78);
           color: #fff;
-          font-size: 16px;
-          touch-action: none;
-        }
-        .rotate-btn {
-          top: -18px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 34px;
-          height: 34px;
-          background: var(--plum);
-          color: #fff;
-          font-size: 15px;
-          cursor: grab;
-          touch-action: none;
-        }
-        .edit-btn {
-          top: -14px;
-          left: -14px;
-          width: 34px;
-          height: 34px;
-          background: var(--gold);
-          color: #4a3352;
-          font-size: 13px;
-          touch-action: none;
-        }
-        .resize-btn {
-          bottom: -14px;
-          right: -14px;
           width: 32px;
           height: 32px;
-          background: var(--sage);
-          color: #fff;
-          font-size: 14px;
-          cursor: nwse-resize;
           touch-action: none;
+        }
+        .ctrl-btn :global(svg) {
+          width: 14px;
+          height: 14px;
+        }
+        .del-btn {
+          top: -13px;
+          right: -13px;
+        }
+        .rotate-btn {
+          top: -16px;
+          left: 50%;
+          transform: translateX(-50%);
+          cursor: grab;
+        }
+        .edit-btn {
+          top: -13px;
+          left: -13px;
+        }
+        .resize-btn {
+          bottom: -13px;
+          right: -13px;
+          cursor: nwse-resize;
         }
 
         /* ---------- side panel: docked on wide screens, bottom sheet on mobile ---------- */
