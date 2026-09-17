@@ -409,8 +409,7 @@ export default function BoardEditorPage() {
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7" /><path d="M21 3v6h-6" /></svg>
                               </div>
                               <div className="caption-handle caption-resize" onPointerDown={(e) => onCaptionResizePointerDown(e, card)}>
-                                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: -0.5 }}>A</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 1 }}>A</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
                               </div>
                             </>
                           )}
@@ -692,14 +691,14 @@ export default function BoardEditorPage() {
         }
         .caption-handle {
           position: absolute;
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f3e9d8;
-          color: #241c33;
+          background: rgba(36, 28, 51, 0.78);
+          color: #fff;
           cursor: pointer;
           touch-action: none;
           box-shadow: 0 3px 8px rgba(36, 28, 51, 0.35);
@@ -709,13 +708,14 @@ export default function BoardEditorPage() {
           height: 11px;
         }
         .caption-rotate {
-          top: -24px;
+          top: -26px;
           left: 50%;
           transform: translateX(-50%);
+          cursor: grab;
         }
         .caption-resize {
-          bottom: -8px;
-          right: -8px;
+          bottom: -9px;
+          right: -9px;
           cursor: nwse-resize;
           padding: 0 1px;
         }
