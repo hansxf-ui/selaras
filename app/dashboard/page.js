@@ -225,8 +225,13 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="board-grid" onClick={() => setRevealId(null)}>
-          {boards.map((b) => (
-            <div key={b.id} className="board-tile" onClick={(e) => { e.stopPropagation(); handleTileClick(b); }}>
+          {boards.map((b, i) => (
+            <div
+              key={b.id}
+              className="board-tile"
+              style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
+              onClick={(e) => { e.stopPropagation(); handleTileClick(b); }}
+            >
               <div style={{ position: "relative" }}>
                 <BoardPreview elements={b.elements} />
                 {revealId === b.id && (
