@@ -17,60 +17,60 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
       setError("Email atau kata sandi salah.");
       return;
     }
-
     router.push("/dashboard");
   }
 
   return (
-    <div className="container">
-      <h1>Selamat datang kembali</h1>
-      <p className="subtitle">Masuk untuk lanjutkan board yang sedang kamu susun.</p>
-
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="nama@email.com"
-            required
-          />
+    <div className="page-center">
+      <div className="card-panel">
+        <div className="brand" style={{ marginBottom: 24 }}>
+          Selaras
         </div>
-        <div className="field">
-          <label htmlFor="password">Kata sandi</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Kata sandi"
-            required
-          />
-        </div>
+        <h1>Selamat datang kembali</h1>
+        <p className="subtitle">Masuk untuk lanjutkan board yang sedang kamu susun.</p>
 
-        {error && <p className="error-text">{error}</p>}
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nama@email.com"
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Kata sandi</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Kata sandi"
+              required
+            />
+          </div>
 
-        <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "Memproses..." : "Masuk"}
-        </button>
-      </form>
+          {error && <p className="error-text">{error}</p>}
 
-      <p className="switch-line">
-        Belum punya akun? <Link href="/signup">Daftar di sini</Link>
-      </p>
+          <button className="btn-primary" type="submit" disabled={loading}>
+            {loading ? "Memproses..." : "Masuk"}
+          </button>
+        </form>
+
+        <p className="switch-line">
+          Belum punya akun? <Link href="/signup">Daftar di sini</Link>
+        </p>
+      </div>
     </div>
   );
 }
