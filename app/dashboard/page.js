@@ -77,6 +77,14 @@ export default function DashboardPage() {
     if (!error) router.push(`/board/${data.id}`);
   }
 
+  async function deleteBoard(e, board) {
+    e.stopPropagation();
+    const sure = window.confirm(`Hapus board "${board.title}"? Tindakan ini tidak bisa dibatalkan.`);
+    if (!sure) return;
+    await supabase.from("boards").delete().eq("id", board.id);
+    setBoards((prev) => prev.filter((b) => b.id !== board.id));
+  }
+
   if (loading) {
     return (
       <div className="dash-wrap">
@@ -106,7 +114,28 @@ export default function DashboardPage() {
         <div className="board-grid">
           {boards.map((b) => (
             <div key={b.id} className="board-tile" onClick={() => router.push(`/board/${b.id}`)}>
-              <BoardPreview elements={b.elements} />
+              <div style={{ position: "relative" }}>
+                <BoardPreview elements={b.elements} />
+                <button
+                  onClick={(e) => deleteBoard(e, b)}
+                  aria-label="Hapus board"
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "rgba(36,28,51,0.55)",
+                    color: "#fff",
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
               <div className="board-tile-body">
                 <p className="board-tile-title">{b.title}</p>
                 <p className="board-tile-meta">{relativeTime(b.updated_at || b.created_at)}</p>
