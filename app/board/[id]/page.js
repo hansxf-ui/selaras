@@ -23,6 +23,8 @@ function makeCard(type, extra = {}) {
     caption: "",
     captionXPct: 50,
     captionYPct: 85,
+    captionScale: 1,
+    captionRotation: 0,
     ...extra,
   };
 }
@@ -41,6 +43,8 @@ export default function BoardEditorPage() {
   const [exporting, setExporting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [user, setUser] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [toast, setToast] = useState("");
 
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -48,6 +52,8 @@ export default function BoardEditorPage() {
   const rotateState = useRef(null);
   const resizeState = useRef(null);
   const captionDragState = useRef(null);
+  const captionResizeState = useRef(null);
+  const captionRotateState = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -183,6 +189,22 @@ export default function BoardEditorPage() {
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
+  function onCaptionResizePointerDown(e, card) {
+    e.stopPropagation();
+    captionResizeState.current = { id: card.id, startY: e.clientY, startScale: card.captionScale };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function onCaptionRotatePointerDown(e, card) {
+    e.stopPropagation();
+    const rect = e.currentTarget.parentElement.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const startAngle = (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
+    captionRotateState.current = { id: card.id, centerX, centerY, startAngle, startRotation: card.captionRotation };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
   useEffect(() => {
     function onMove(e) {
       if (dragState.current) {
@@ -219,12 +241,25 @@ export default function BoardEditorPage() {
         const captionYPct = Math.max(5, Math.min(95, startYPct + (dy / fillHeight) * 100));
         updateCard(id, { captionXPct, captionYPct });
       }
+      if (captionResizeState.current) {
+        const { id, startY, startScale } = captionResizeState.current;
+        const dy = e.clientY - startY;
+        const captionScale = Math.max(0.6, Math.min(2.5, startScale + dy / 100));
+        updateCard(id, { captionScale });
+      }
+      if (captionRotateState.current) {
+        const { id, centerX, centerY, startAngle, startRotation } = captionRotateState.current;
+        const angle = (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
+        updateCard(id, { captionRotation: startRotation + (angle - startAngle) });
+      }
     }
     function onUp() {
       dragState.current = null;
       rotateState.current = null;
       resizeState.current = null;
       captionDragState.current = null;
+      captionResizeState.current = null;
+      captionRotateState.current = null;
     }
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -258,14 +293,13 @@ export default function BoardEditorPage() {
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      alert("Gagal mengunduh board. Coba lagi ya.");
+      setToast("Gagal mengunduh board. Coba lagi ya.");
+      setTimeout(() => setToast(""), 3000);
     }
     setExporting(false);
   }
 
-  async function deleteBoard() {
-    const sure = window.confirm(`Hapus board "${title}"? Tindakan ini tidak bisa dibatalkan.`);
-    if (!sure) return;
+  async function confirmDeleteBoard() {
     await supabase.from("boards").delete().eq("id", boardId);
     router.push("/dashboard");
   }
@@ -302,7 +336,7 @@ export default function BoardEditorPage() {
           <button className="chip-btn" onClick={exportBoard} disabled={exporting}>
             {exporting ? "..." : "Unduh"}
           </button>
-          <button className="chip-btn chip-danger" onClick={deleteBoard}>Hapus</button>
+          <button className="chip-btn chip-danger" onClick={() => setShowDeleteConfirm(true)}>Hapus</button>
           <button className="chip-btn chip-primary" onClick={saveBoard} disabled={saving}>
             {saving ? "..." : "Simpan"}
           </button>
@@ -353,9 +387,16 @@ export default function BoardEditorPage() {
                           style={{
                             left: `${card.captionXPct}%`,
                             top: `${card.captionYPct}%`,
+                            transform: `translate(-50%, -50%) rotate(${card.captionRotation}deg) scale(${card.captionScale})`,
                           }}
                         >
                           {card.caption}
+                          {selectedId === card.id && (
+                            <>
+                              <div className="caption-handle caption-rotate" onPointerDown={(e) => onCaptionRotatePointerDown(e, card)}>↻</div>
+                              <div className="caption-handle caption-resize" onPointerDown={(e) => onCaptionResizePointerDown(e, card)}>⤡</div>
+                            </>
+                          )}
                         </div>
                       )}
                     </>
@@ -451,6 +492,21 @@ export default function BoardEditorPage() {
           </>
         )}
       </div>
+
+      {showDeleteConfirm && (
+        <div className="confirm-veil" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <p className="confirm-title">Hapus board ini?</p>
+            <p className="confirm-body">"{title}" akan terhapus permanen dan tidak bisa dikembalikan.</p>
+            <div className="confirm-actions">
+              <button className="confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>Batal</button>
+              <button className="confirm-delete" onClick={confirmDeleteBoard}>Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="toast">{toast}</div>}
 
       <style jsx>{`
         .editor-shell {
@@ -599,7 +655,6 @@ export default function BoardEditorPage() {
         }
         .card-caption {
           position: absolute;
-          transform: translate(-50%, -50%);
           max-width: 85%;
           background: rgba(36, 28, 51, 0.6);
           color: #f3e9d8;
@@ -612,6 +667,32 @@ export default function BoardEditorPage() {
           cursor: grab;
           touch-action: none;
           z-index: 3;
+        }
+        .caption-handle {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--plum);
+          color: #fff;
+          font-size: 10px;
+          cursor: pointer;
+          touch-action: none;
+          box-shadow: 0 3px 8px rgba(36, 28, 51, 0.35);
+        }
+        .caption-rotate {
+          top: -24px;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        .caption-resize {
+          bottom: -8px;
+          right: -8px;
+          background: var(--sage);
+          cursor: nwse-resize;
         }
         .ctrl-btn {
           position: absolute;
@@ -790,6 +871,73 @@ export default function BoardEditorPage() {
             font-weight: 500;
             cursor: pointer;
           }
+        }
+
+        .confirm-veil {
+          position: fixed;
+          inset: 0;
+          background: rgba(36, 28, 51, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 50;
+          padding: 24px;
+        }
+        .confirm-box {
+          background: var(--panel);
+          border-radius: 20px;
+          max-width: 320px;
+          width: 100%;
+          padding: 26px 24px;
+          box-shadow: 0 30px 60px -20px rgba(36, 28, 51, 0.4);
+        }
+        .confirm-title {
+          font-family: "Fraunces", serif;
+          font-weight: 500;
+          font-size: 18px;
+          margin: 0 0 8px;
+        }
+        .confirm-body {
+          font-size: 13.5px;
+          color: var(--ink-soft);
+          line-height: 1.5;
+          margin: 0 0 22px;
+        }
+        .confirm-actions {
+          display: flex;
+          gap: 10px;
+        }
+        .confirm-cancel,
+        .confirm-delete {
+          flex: 1;
+          padding: 11px;
+          border-radius: 100px;
+          font-size: 13.5px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .confirm-cancel {
+          border: 1px solid var(--line);
+          background: none;
+          color: var(--ink);
+        }
+        .confirm-delete {
+          border: none;
+          background: var(--danger);
+          color: #fff;
+        }
+        .toast {
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: var(--ink);
+          color: var(--bg);
+          padding: 12px 20px;
+          border-radius: 100px;
+          font-size: 13px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+          z-index: 60;
         }
       `}</style>
     </div>
