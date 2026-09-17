@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { toPng } from "html-to-image";
 import { supabase } from "../../../lib/supabaseClient";
 
 const COLORS = ["#6B4E71", "#D9A441", "#C6714F", "#71865F", "#7C93A8"];
@@ -32,6 +33,7 @@ export default function BoardEditorPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [user, setUser] = useState(null);
   const fileInputRef = useRef(null);
@@ -186,6 +188,28 @@ export default function BoardEditorPage() {
     setSaving(false);
   }
 
+  async function exportBoard() {
+    setSelectedId(null);
+    setExporting(true);
+    // beri jeda sedikit biar tombol hapus/rotate yang lagi tampil sempat hilang dari layar sebelum di-capture
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    try {
+      const dataUrl = await toPng(canvasRef.current, {
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      const link = document.createElement("a");
+      link.download = `${(title || "board").replace(/\s+/g, "-").toLowerCase()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      alert("Gagal mengunduh board. Coba lagi ya.");
+    }
+
+    setExporting(false);
+  }
+
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft)" }}>
@@ -289,6 +313,22 @@ export default function BoardEditorPage() {
             + Warna
           </button>
           <button
+            onClick={exportBoard}
+            disabled={exporting}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 100,
+              border: "1px solid var(--line)",
+              background: "none",
+              color: "var(--ink)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            {exporting ? "Menyiapkan..." : "Unduh"}
+          </button>
+          <button
             onClick={saveBoard}
             disabled={saving}
             style={{
@@ -337,6 +377,20 @@ export default function BoardEditorPage() {
               if (e.target === e.currentTarget) setSelectedId(null);
             }}
           >
+            <div
+              style={{
+                position: "absolute",
+                bottom: 10,
+                right: 12,
+                fontSize: 10.5,
+                color: "rgba(36,28,51,0.35)",
+                fontFamily: "Inter, sans-serif",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            >
+              dibuat dengan Selaras
+            </div>
             {cards.map((card) => (
               <div
                 key={card.id}
@@ -390,6 +444,7 @@ export default function BoardEditorPage() {
                     src={card.imageUrl}
                     alt=""
                     draggable={false}
+                    crossOrigin="anonymous"
                     style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
                   />
                 )}
