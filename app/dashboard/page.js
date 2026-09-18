@@ -15,6 +15,13 @@ function relativeTime(dateString) {
   return new Date(dateString).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 }
 
+function getProgress(elements) {
+  const list = elements || [];
+  const total = list.length;
+  const achieved = list.filter((el) => el.achieved).length;
+  return { achieved, total };
+}
+
 function BoardPreview({ elements }) {
   const list = elements || [];
   const images = list.filter((el) => el.type === "image" && el.imageUrl).slice(0, 3);
@@ -227,6 +234,12 @@ export default function DashboardPage() {
             >
               <div style={{ position: "relative" }}>
                 <BoardPreview elements={b.elements} />
+                {(() => {
+                  const { achieved, total } = getProgress(b.elements);
+                  return total > 0 && achieved === total ? (
+                    <div className="achieved-all-badge">🎉 Tercapai penuh</div>
+                  ) : null;
+                })()}
                 {revealId === b.id && (
                   <button
                     onClick={(e) => askDeleteBoard(e, b)}
@@ -254,6 +267,27 @@ export default function DashboardPage() {
                 <p className="board-tile-meta">
                   {revealId === b.id ? "Ketuk lagi untuk membuka" : relativeTime(b.updated_at || b.created_at)}
                 </p>
+                {(() => {
+                  const { achieved, total } = getProgress(b.elements);
+                  if (total === 0) return null;
+                  return (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ height: 4, borderRadius: 2, background: "var(--line)", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${(achieved / total) * 100}%`,
+                            background: "var(--gold)",
+                            borderRadius: 2,
+                          }}
+                        />
+                      </div>
+                      <p style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 4 }}>
+                        {achieved}/{total} tercapai
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ))}
