@@ -28,6 +28,9 @@ function makeCard(type, extra = {}) {
     captionWidth: 140,
     captionScale: 1,
     captionRotation: 0,
+    achieved: false,
+    achievedNote: "",
+    achievedDate: null,
     ...extra,
   };
 }
@@ -49,6 +52,8 @@ export default function BoardEditorPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [toast, setToast] = useState("");
+  const [achieveModalId, setAchieveModalId] = useState(null);
+  const [achieveNoteDraft, setAchieveNoteDraft] = useState("");
 
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -114,6 +119,27 @@ export default function BoardEditorPage() {
   function deleteCard(id) {
     setCards((prev) => prev.filter((c) => c.id !== id));
     if (selectedId === id) setSelectedId(null);
+  }
+
+  function toggleAchieved(card) {
+    if (card.achieved) {
+      // batalkan tercapai
+      updateCard(card.id, { achieved: false });
+    } else {
+      // buka modal buat catatan singkat sebelum menandai tercapai
+      setAchieveNoteDraft(card.achievedNote || "");
+      setAchieveModalId(card.id);
+    }
+  }
+
+  function confirmAchieved() {
+    updateCard(achieveModalId, {
+      achieved: true,
+      achievedNote: achieveNoteDraft,
+      achievedDate: new Date().toISOString(),
+    });
+    setAchieveModalId(null);
+    setAchieveNoteDraft("");
   }
 
   function triggerImagePicker() {
@@ -427,12 +453,18 @@ export default function BoardEditorPage() {
                 }}
               >
                 <div
-                  className="card-fill"
+                  className={"card-fill" + (card.achieved ? " achieved" : "")}
                   style={{
                     background: card.type === "image" ? "#E7D9C7" : card.color,
                     padding: card.type === "image" ? 0 : 14,
                   }}
                 >
+                  {card.achieved && (
+                    <div className="achieved-stamp">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                    </div>
+                  )}
+
                   {card.type === "text" && (
                     <p
                       className="card-text"
@@ -496,6 +528,13 @@ export default function BoardEditorPage() {
                     </div>
                     <div className="ctrl-btn resize-btn" onPointerDown={(e) => onResizePointerDown(e, card)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></svg>
+                    </div>
+                    <div
+                      className={"ctrl-btn achieve-btn" + (card.achieved ? " active" : "")}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); toggleAchieved(card); }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                     </div>
                   </>
                 )}
@@ -568,6 +607,23 @@ export default function BoardEditorPage() {
                   />
                 </div>
               )}
+
+              {panelCard.achieved && (
+                <div className="panel-section">
+                  <p className="panel-label">✓ Catatan pencapaian</p>
+                  <textarea
+                    className="panel-textarea"
+                    placeholder="Tulis catatannya di sini..."
+                    value={panelCard.achievedNote}
+                    onChange={(e) => updateCard(panelCard.id, { achievedNote: e.target.value })}
+                  />
+                  {panelCard.achievedDate && (
+                    <p style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 6 }}>
+                      Ditandai {new Date(panelCard.achievedDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -581,6 +637,29 @@ export default function BoardEditorPage() {
             <div className="confirm-actions">
               <button className="confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>Batal</button>
               <button className="confirm-delete" onClick={confirmDeleteBoard}>Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {achieveModalId && (
+        <div className="confirm-veil" onClick={() => setAchieveModalId(null)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="achieve-modal-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+            </div>
+            <p className="confirm-title">Tandai sebagai tercapai?</p>
+            <p className="confirm-body">Tulis catatan singkat kalau mau — kapan, atau gimana rasanya sampai di titik ini.</p>
+            <textarea
+              className="panel-textarea"
+              style={{ width: "100%", marginBottom: 18 }}
+              placeholder="Opsional..."
+              value={achieveNoteDraft}
+              onChange={(e) => setAchieveNoteDraft(e.target.value)}
+            />
+            <div className="confirm-actions">
+              <button className="confirm-cancel" onClick={() => setAchieveModalId(null)}>Batal</button>
+              <button className="achieve-confirm-btn" onClick={confirmAchieved}>Tandai tercapai</button>
             </div>
           </div>
         </div>
@@ -703,6 +782,32 @@ export default function BoardEditorPage() {
         .board-card.selected .card-fill {
           border-color: var(--plum);
         }
+        .card-fill.achieved {
+          border-color: var(--gold);
+          box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.25);
+        }
+        .board-card.selected .card-fill.achieved {
+          border-color: var(--plum);
+        }
+        .achieved-stamp {
+          position: absolute;
+          top: 6px;
+          left: 6px;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: var(--gold);
+          color: #4a3352;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 4;
+          box-shadow: 0 3px 8px rgba(36, 28, 51, 0.3);
+        }
+        .achieved-stamp svg {
+          width: 13px;
+          height: 13px;
+        }
         .photo-clip {
           position: absolute;
           inset: 0;
@@ -816,6 +921,14 @@ export default function BoardEditorPage() {
           bottom: -13px;
           right: -13px;
           cursor: nwse-resize;
+        }
+        .achieve-btn {
+          bottom: -13px;
+          left: -13px;
+        }
+        .achieve-btn.active {
+          background: var(--gold);
+          color: #4a3352;
         }
 
         /* ---------- side panel: docked on wide screens, bottom sheet on mobile ---------- */
@@ -995,6 +1108,32 @@ export default function BoardEditorPage() {
           border: none;
           background: var(--danger);
           color: #fff;
+        }
+        .achieve-modal-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: rgba(217, 164, 65, 0.16);
+          color: #b9832a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+        .achieve-modal-icon svg {
+          width: 20px;
+          height: 20px;
+        }
+        .achieve-confirm-btn {
+          flex: 1;
+          padding: 11px;
+          border-radius: 100px;
+          font-size: 13.5px;
+          font-weight: 500;
+          cursor: pointer;
+          border: none;
+          background: var(--gold);
+          color: #4a3352;
         }
         .toast {
           position: fixed;
