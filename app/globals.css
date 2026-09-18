@@ -183,6 +183,9 @@ h3 {
   max-width: 640px;
   margin: 0 auto;
   padding: 40px 22px 60px;
+  min-height: 100vh;
+  background: radial-gradient(circle at 90% 0%, rgba(217, 164, 65, 0.1), transparent 40%),
+    radial-gradient(circle at 0% 90%, rgba(107, 78, 113, 0.08), transparent 45%);
 }
 
 .dash-top {
@@ -190,6 +193,37 @@ h3 {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 4px;
+}
+
+.dash-top h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.premium-tag {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #b9832a;
+  background: rgba(217, 164, 65, 0.16);
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+
+.chip-upgrade {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, var(--gold), #c6714f);
+  border: none;
+  padding: 9px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .dash-count {
@@ -201,15 +235,20 @@ h3 {
 .icon-btn {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  border-radius: 100px;
+  background: var(--ink);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 18px;
-  color: var(--plum);
+  color: var(--bg);
+  transition: transform 0.15s;
+}
+
+.icon-btn:hover {
+  transform: translateY(-1px);
 }
 
 .board-grid {
