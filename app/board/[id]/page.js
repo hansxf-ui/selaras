@@ -99,6 +99,9 @@ export default function BoardEditorPage() {
       setTitle(data.title || "Board baru");
       setCards(Array.isArray(data.elements) ? data.elements : []);
       setLoading(false);
+
+      // catat kapan board ini terakhir dibuka (buat sistem pengingat), tanpa nunggu selesai
+      supabase.from("boards").update({ last_opened_at: new Date().toISOString() }).eq("id", boardId).then(() => {});
     }
     load();
   }, [boardId, router]);
