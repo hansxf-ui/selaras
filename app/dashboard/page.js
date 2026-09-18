@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import { subscribeToPush, isPushSubscribed } from "../../lib/pushClient";
 
 function relativeTime(dateString) {
   const diffMs = Date.now() - new Date(dateString).getTime();
@@ -66,6 +67,9 @@ export default function DashboardPage() {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -99,9 +103,26 @@ export default function DashboardPage() {
 
       if (!error) setBoards(data);
       setLoading(false);
+
+      isPushSubscribed().then(setPushEnabled).catch(() => {});
     }
     load();
   }, [router]);
+
+  async function handleEnablePush() {
+    setPushError("");
+    setPushLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      await subscribeToPush(supabase, user.id);
+      setPushEnabled(true);
+    } catch (err) {
+      setPushError(err.message || "Gagal mengaktifkan notifikasi.");
+    }
+    setPushLoading(false);
+  }
 
   async function activatePremium() {
     const {
@@ -185,6 +206,45 @@ export default function DashboardPage() {
         </div>
       </div>
       <p className="dash-count">{boards.length} board tersimpan</p>
+
+      {!pushEnabled && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            background: "var(--panel)",
+            border: "1px solid var(--line)",
+            borderRadius: 14,
+            padding: "12px 14px",
+            marginBottom: 20,
+          }}
+        >
+          <p style={{ fontSize: 12.5, color: "var(--ink-soft)", lineHeight: 1.4, margin: 0 }}>
+            Aktifkan pengingat biar kamu nggak lupa sama board yang sedang disusun.
+          </p>
+          <button
+            onClick={handleEnablePush}
+            disabled={pushLoading}
+            style={{
+              flexShrink: 0,
+              fontSize: 12.5,
+              fontWeight: 500,
+              color: "#fff",
+              background: "var(--plum)",
+              border: "none",
+              padding: "8px 14px",
+              borderRadius: 100,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {pushLoading ? "..." : "Aktifkan"}
+          </button>
+        </div>
+      )}
+      {pushError && <p className="error-text" style={{ marginTop: -12, marginBottom: 16 }}>{pushError}</p>}
 
       {showUpgrade && (
         <div
