@@ -100,7 +100,7 @@ export default function Home() {
           justify-content: space-between;
           padding: 22px 0;
         }
-        .nav-cta {
+        :global(.nav-cta) {
           padding: 9px 18px;
           border-radius: 100px;
           background: var(--ink);
@@ -154,7 +154,7 @@ export default function Home() {
           gap: 10px;
           margin-top: 26px;
         }
-        .btn-primary-lg {
+        :global(.btn-primary-lg) {
           padding: 13px 22px;
           border-radius: 100px;
           background: var(--plum);
@@ -164,7 +164,7 @@ export default function Home() {
           text-decoration: none;
           text-align: center;
         }
-        .btn-secondary-lg {
+        :global(.btn-secondary-lg) {
           padding: 13px 22px;
           border-radius: 100px;
           border: 1px solid var(--line);
