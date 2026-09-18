@@ -16,24 +16,39 @@ function relativeTime(dateString) {
 }
 
 function BoardPreview({ elements }) {
-  const colors = (elements || [])
-    .map((el) => (el.type === "image" ? null : el.color))
-    .filter(Boolean)
-    .slice(0, 3);
+  const list = elements || [];
+  const images = list.filter((el) => el.type === "image" && el.imageUrl).slice(0, 3);
+  const colors = list.map((el) => (el.type === "image" ? null : el.color)).filter(Boolean).slice(0, 3);
 
-  if (colors.length === 0) {
+  if (images.length > 0) {
     return (
-      <div className="board-tile-preview" style={{ background: "linear-gradient(150deg,#E7D9C7,#D9BFA0)" }} />
+      <div className="board-tile-preview" style={{ display: "flex", gap: 2, padding: 2, background: "var(--bg)" }}>
+        {images.map((img, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src={img.imageUrl}
+            alt=""
+            style={{ flex: 1, height: "100%", objectFit: "cover", borderRadius: 6, minWidth: 0 }}
+          />
+        ))}
+        {images.length === 1 &&
+          colors.slice(0, 2).map((c, i) => <div key={i} style={{ flex: 1, borderRadius: 6, background: c }} />)}
+      </div>
     );
   }
 
-  return (
-    <div className="board-tile-preview" style={{ display: "flex", gap: 2, padding: 2, background: "var(--bg)" }}>
-      {colors.map((c, i) => (
-        <div key={i} style={{ flex: 1, borderRadius: 6, background: c }} />
-      ))}
-    </div>
-  );
+  if (colors.length > 0) {
+    return (
+      <div className="board-tile-preview" style={{ display: "flex", gap: 2, padding: 2, background: "var(--bg)" }}>
+        {colors.map((c, i) => (
+          <div key={i} style={{ flex: 1, borderRadius: 6, background: c }} />
+        ))}
+      </div>
+    );
+  }
+
+  return <div className="board-tile-preview" style={{ background: "linear-gradient(150deg,#E7D9C7,#D9BFA0)" }} />;
 }
 
 export default function DashboardPage() {
@@ -140,36 +155,14 @@ export default function DashboardPage() {
   return (
     <div className="dash-wrap">
       <div className="dash-top">
-        <h1>Board saya</h1>
+        <h1>
+          Board saya
+          {isPremium && <span className="premium-tag">Premium</span>}
+        </h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {isPremium ? (
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: "#B9832A",
-                background: "rgba(217,164,65,0.15)",
-                padding: "6px 12px",
-                borderRadius: 100,
-              }}
-            >
-              ✓ Premium
-            </span>
-          ) : (
-            <button
-              onClick={() => setShowUpgrade(true)}
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: "#fff",
-                background: "var(--gold)",
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: 100,
-                cursor: "pointer",
-              }}
-            >
-              Upgrade Premium
+          {!isPremium && (
+            <button className="chip-upgrade" onClick={() => setShowUpgrade(true)}>
+              ✨ Upgrade
             </button>
           )}
           <button className="icon-btn" onClick={createBoard} aria-label="Board baru">
