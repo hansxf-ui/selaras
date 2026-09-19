@@ -14,6 +14,24 @@
   --danger: #b3443a;
 }
 
+[data-theme="dark"] {
+  --ink: #f1ecea;
+  --ink-soft: #b9afc4;
+  --bg: #1b1622;
+  --panel: #241d2c;
+  --line: rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #f1ecea;
+    --ink-soft: #b9afc4;
+    --bg: #1b1622;
+    --panel: #241d2c;
+    --line: rgba(255, 255, 255, 0.1);
+  }
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
