@@ -124,13 +124,62 @@ export default function DashboardPage() {
     setPushLoading(false);
   }
 
-  async function activatePremium() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    await supabase.from("profiles").update({ is_premium: true, updated_at: new Date().toISOString() }).eq("id", user.id);
-    setIsPremium(true);
-    setShowUpgrade(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState("");
+
+  function loadSnapScript() {
+    return new Promise((resolve, reject) => {
+      if (window.snap) return resolve();
+      const isProd = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true";
+      const script = document.createElement("script");
+      script.src = isProd ? "https://app.midtrans.com/snap/snap.js" : "https://app.sandbox.midtrans.com/snap/snap.js";
+      script.setAttribute("data-client-key", process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY);
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
+
+  async function startPayment() {
+    setPayError("");
+    setPayLoading(true);
+    try {
+      await loadSnapScript();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const res = await fetch("/api/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Gagal memulai pembayaran");
+
+      window.snap.pay(data.token, {
+        onSuccess: function () {
+          setIsPremium(true);
+          setShowUpgrade(false);
+        },
+        onPending: function () {
+          setShowUpgrade(false);
+        },
+        onError: function () {
+          setPayError("Pembayaran gagal. Coba lagi ya.");
+        },
+        onClose: function () {
+          // user menutup popup tanpa menyelesaikan pembayaran, tidak apa-apa
+        },
+      });
+    } catch (err) {
+      setPayError(err.message || "Gagal memulai pembayaran.");
+    }
+    setPayLoading(false);
   }
 
   async function handleLogout() {
@@ -262,12 +311,11 @@ export default function DashboardPage() {
             <p style={{ fontSize: 13.5, color: "var(--ink-soft)", lineHeight: 1.55, marginBottom: 20 }}>
               Unduh board tanpa watermark, resolusi tinggi, board tanpa batas.
               <br />
-              <span style={{ fontSize: 12, opacity: 0.7 }}>
-                (Mode simulasi — pembayaran asli belum terhubung)
-              </span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>Rp29.000</span>
             </p>
-            <button className="btn-primary" onClick={activatePremium} style={{ marginBottom: 10 }}>
-              Aktifkan Premium
+            {payError && <p className="error-text" style={{ marginBottom: 14 }}>{payError}</p>}
+            <button className="btn-primary" onClick={startPayment} disabled={payLoading} style={{ marginBottom: 10 }}>
+              {payLoading ? "Memproses..." : "Lanjut ke pembayaran"}
             </button>
             <button className="btn-outline" onClick={() => setShowUpgrade(false)}>
               Batal
