@@ -259,6 +259,7 @@ export default function Home() {
           position: relative;
           height: 260px;
           perspective: 1200px;
+          order: -1;
         }
         .stack {
           position: absolute;
@@ -626,6 +627,7 @@ export default function Home() {
           }
           .stage {
             height: 340px;
+            order: 0;
           }
           .feature-grid {
             grid-template-columns: repeat(3, 1fr);
