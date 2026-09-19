@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 
 const PREMIUM_PRICE = 29000; // dalam Rupiah
 
@@ -24,7 +25,10 @@ export async function POST(request) {
     return Response.json({ error: "Sesi tidak valid, coba masuk ulang." }, { status: 401 });
   }
 
-  const orderId = `selaras-${user.id}-${Date.now()}`;
+  const orderId = `selaras-${randomUUID().slice(0, 8)}-${Date.now()}`;
+
+  await supabaseAdmin.from("order_payments").insert({ order_id: orderId, user_id: user.id });
+
   const serverKey = process.env.MIDTRANS_SERVER_KEY;
   const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
   const baseUrl = isProduction
