@@ -20,19 +20,23 @@ export async function POST(request) {
     (transaction_status === "capture" && fraud_status === "accept");
 
   if (isSuccess) {
-    // order_id formatnya: selaras-<user_id>-<timestamp>
-    const parts = order_id.split("-");
-    const userId = parts.slice(1, -1).join("-");
-
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    await supabaseAdmin
-      .from("profiles")
-      .update({ is_premium: true, updated_at: new Date().toISOString() })
-      .eq("id", userId);
+    const { data: orderRow } = await supabaseAdmin
+      .from("order_payments")
+      .select("user_id")
+      .eq("order_id", order_id)
+      .single();
+
+    if (orderRow) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ is_premium: true, updated_at: new Date().toISOString() })
+        .eq("id", orderRow.user_id);
+    }
   }
 
   return Response.json({ received: true });
