@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import Link from "next/link";
 
 export default function Home() {
@@ -10,6 +8,11 @@ export default function Home() {
       <div className="wrap">
         <nav>
           <div className="brand">Selaras</div>
+          <div className="nav-links">
+            <a href="#fitur">Fitur</a>
+            <a href="#contoh">Contoh</a>
+            <a href="#harga">Harga</a>
+          </div>
           <Link href="/signup" className="nav-cta">
             Mulai gratis
           </Link>
@@ -29,10 +32,11 @@ export default function Home() {
               <Link href="/signup" className="btn-primary-lg">
                 Buat board pertamamu
               </Link>
-              <Link href="/login" className="btn-secondary-lg">
-                Sudah punya akun? Masuk
-              </Link>
+              <a href="#contoh" className="btn-secondary-lg">
+                Lihat contoh board
+              </a>
             </div>
+            <div className="hero-note">Gratis untuk board pertama. Tanpa kartu kredit.</div>
           </div>
 
           <div className="stage">
@@ -55,23 +59,92 @@ export default function Home() {
             Dipakai untuk menyusun <b>rencana karir</b>, <b>pernikahan</b>, dan{" "}
             <b>kebiasaan baru</b>
           </div>
+          <div>Lebih dari 12.000 board dibuat bulan ini</div>
         </div>
 
-        <section className="features">
-          <div className="feature">
-            <span className="num">satu</span>
-            <h3>Pilih arah board</h3>
-            <p>Karir, hubungan, kesehatan, atau rencana pribadi — mulai dari yang paling relevan buatmu.</p>
+        <section className="section" id="fitur">
+          <div className="section-head">
+            <div className="eyebrow-plain">Cara kerjanya</div>
+            <h2>Tiga langkah dari ide kosong ke board yang jadi</h2>
+            <p>Nggak perlu mulai dari kanvas kosong. Selaras bantu kamu dari memilih arah sampai menyimpan hasil akhirnya.</p>
           </div>
-          <div className="feature">
-            <span className="num">dua</span>
-            <h3>Susun bebas</h3>
-            <p>Tarik foto, ubah warna, tambah kutipan. Semua elemen bisa digeser, diputar, dan diubah ukurannya.</p>
+          <div className="feature-grid">
+            <div className="feature">
+              <span className="num">satu</span>
+              <h3>Pilih arah board</h3>
+              <p>Karir, hubungan, kesehatan, atau rencana pribadi — mulai dari yang paling relevan buatmu.</p>
+            </div>
+            <div className="feature">
+              <span className="num">dua</span>
+              <h3>Susun bebas</h3>
+              <p>Tarik foto, ubah warna, tambah kutipan. Semua elemen bisa digeser, diputar, dan diubah ukurannya.</p>
+            </div>
+            <div className="feature">
+              <span className="num">tiga</span>
+              <h3>Simpan dan unduh</h3>
+              <p>Board tersimpan otomatis di akunmu, dan bisa diunduh jadi gambar kapan saja.</p>
+            </div>
           </div>
-          <div className="feature">
-            <span className="num">tiga</span>
-            <h3>Simpan dan unduh</h3>
-            <p>Board tersimpan otomatis di akunmu, dan bisa diunduh jadi gambar kapan saja.</p>
+        </section>
+
+        <section className="section" id="contoh">
+          <div className="showcase">
+            <div className="showcase-copy">
+              <div className="eyebrow-plain">Contoh hasil</div>
+              <h2>Board yang terasa milikmu sendiri, bukan template kosong</h2>
+              <p>Setiap board bisa dibangun dari nol atau dimulai dari salah satu tema yang sudah kami siapkan, lalu disesuaikan sampai terasa pas.</p>
+              <div className="theme-pills">
+                <div className="pill">Karir dan pekerjaan</div>
+                <div className="pill">Pernikahan</div>
+                <div className="pill">Kesehatan</div>
+                <div className="pill">Rumah dan tempat tinggal</div>
+              </div>
+            </div>
+            <div className="board-mock">
+              <div className="board-mock-grid">
+                <div className="bm bm1" />
+                <div className="bm bm2">
+                  <span>satu langkah setiap hari</span>
+                </div>
+                <div className="bm bm3" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="harga">
+          <div className="section-head">
+            <div className="eyebrow-plain">Harga</div>
+            <h2>Mulai gratis, upgrade kalau sudah terasa perlu</h2>
+          </div>
+          <div className="pricing-grid">
+            <div className="price-card">
+              <div className="price-name">Gratis</div>
+              <div className="price-amt">Rp0</div>
+              <div className="price-list">
+                <div>Board tanpa batas</div>
+                <div>Semua fitur editor</div>
+                <div>Unduhan dengan tanda air</div>
+              </div>
+              <Link href="/signup" className="price-btn">
+                Mulai dari sini
+              </Link>
+            </div>
+            <div className="price-card featured">
+              <div className="badge">Paling dipilih</div>
+              <div className="price-name">Premium</div>
+              <div className="price-amt">
+                Rp29rb<span>/sekali</span>
+              </div>
+              <div className="price-list">
+                <div>Semua fitur Gratis</div>
+                <div>Unduhan resolusi tinggi</div>
+                <div>Tanpa tanda air</div>
+              </div>
+              <Link href="/signup" className="price-btn">
+                Coba sekarang
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -99,6 +172,9 @@ export default function Home() {
           align-items: center;
           justify-content: space-between;
           padding: 22px 0;
+        }
+        .nav-links {
+          display: none;
         }
         :global(.nav-cta) {
           padding: 9px 18px;
@@ -136,7 +212,7 @@ export default function Home() {
           line-height: 1.1;
           letter-spacing: -0.01em;
         }
-        h1 em {
+        h1 :global(em) {
           font-style: italic;
           color: var(--plum);
           font-weight: 500;
@@ -154,6 +230,11 @@ export default function Home() {
           gap: 10px;
           margin-top: 26px;
         }
+        .hero-note {
+          margin-top: 18px;
+          font-size: 12.5px;
+          color: var(--ink-soft);
+        }
         :global(.btn-primary-lg) {
           padding: 13px 22px;
           border-radius: 100px;
@@ -165,13 +246,12 @@ export default function Home() {
           text-align: center;
         }
         :global(.btn-secondary-lg) {
-          padding: 13px 22px;
-          border-radius: 100px;
-          border: 1px solid var(--line);
-          color: var(--ink);
           font-size: 14.5px;
-          font-weight: 500;
+          color: var(--ink);
           text-decoration: none;
+          font-weight: 500;
+          border-bottom: 1px solid var(--line);
+          padding-bottom: 3px;
           text-align: center;
         }
 
@@ -278,14 +358,41 @@ export default function Home() {
           padding: 18px 0;
           font-size: 12.5px;
           color: var(--ink-soft);
-          line-height: 1.5;
+          line-height: 1.7;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
-        .trust b {
+        .trust :global(b) {
           color: var(--ink);
           font-weight: 600;
         }
 
-        .features {
+        .section {
+          padding: 56px 0;
+        }
+        .section-head {
+          max-width: 52ch;
+          margin-bottom: 36px;
+        }
+        .eyebrow-plain {
+          font-size: 13px;
+          color: var(--plum);
+          font-weight: 500;
+          margin-bottom: 12px;
+        }
+        h2 {
+          font-size: clamp(24px, 4.4vw, 30px);
+          line-height: 1.2;
+        }
+        .section-head p {
+          margin-top: 14px;
+          color: var(--ink-soft);
+          font-size: 14.5px;
+          line-height: 1.6;
+        }
+
+        .feature-grid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 1px;
@@ -293,7 +400,6 @@ export default function Home() {
           border: 1px solid var(--line);
           border-radius: 18px;
           overflow: hidden;
-          margin: 40px 0;
         }
         .feature {
           background: var(--panel);
@@ -316,6 +422,148 @@ export default function Home() {
           font-size: 13.5px;
           color: var(--ink-soft);
           line-height: 1.55;
+        }
+
+        .showcase {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+        .showcase-copy p {
+          color: var(--ink-soft);
+          font-size: 14.5px;
+          line-height: 1.65;
+          margin-top: 14px;
+        }
+        .theme-pills {
+          display: flex;
+          gap: 8px;
+          margin-top: 22px;
+          flex-wrap: wrap;
+        }
+        .pill {
+          font-size: 12.5px;
+          padding: 8px 14px;
+          border-radius: 100px;
+          border: 1px solid var(--line);
+          color: var(--ink-soft);
+        }
+        .board-mock {
+          background: var(--panel);
+          border: 1px solid var(--line);
+          border-radius: 20px;
+          padding: 16px;
+          box-shadow: 0 30px 60px -35px rgba(36, 28, 51, 0.25);
+        }
+        .board-mock-grid {
+          display: grid;
+          grid-template-columns: 1.2fr 1fr;
+          grid-template-rows: 90px 90px;
+          gap: 8px;
+        }
+        .bm {
+          border-radius: 12px;
+        }
+        .bm1 {
+          grid-row: span 2;
+          background: linear-gradient(160deg, #d9bfa0, #c6714f);
+        }
+        .bm2 {
+          background: var(--plum);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px;
+        }
+        .bm2 span {
+          font-family: "Fraunces", serif;
+          font-style: italic;
+          color: #f3e9d8;
+          font-size: 12px;
+          text-align: center;
+        }
+        .bm3 {
+          background: linear-gradient(160deg, #9fb08f, #71865f);
+        }
+
+        .pricing-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .price-card {
+          border: 1px solid var(--line);
+          border-radius: 18px;
+          padding: 28px 24px;
+          background: var(--panel);
+          position: relative;
+        }
+        .price-card.featured {
+          border-color: var(--plum);
+          border-width: 2px;
+        }
+        .badge {
+          position: absolute;
+          top: -12px;
+          left: 24px;
+          background: var(--plum);
+          color: #fff;
+          font-size: 11.5px;
+          padding: 4px 12px;
+          border-radius: 100px;
+          font-weight: 500;
+        }
+        .price-name {
+          font-size: 14px;
+          color: var(--ink-soft);
+          margin-bottom: 6px;
+        }
+        .price-amt {
+          font-family: "Fraunces", serif;
+          font-size: 32px;
+          font-weight: 500;
+          letter-spacing: -0.02em;
+        }
+        .price-amt :global(span) {
+          font-family: "Inter", sans-serif;
+          font-size: 13px;
+          color: var(--ink-soft);
+          font-weight: 400;
+        }
+        .price-list {
+          margin-top: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .price-list div {
+          font-size: 13.5px;
+          color: var(--ink-soft);
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
+        }
+        .price-list div::before {
+          content: "—";
+          color: var(--plum);
+          flex-shrink: 0;
+        }
+        :global(.price-btn) {
+          display: block;
+          text-align: center;
+          margin-top: 22px;
+          padding: 12px;
+          border-radius: 100px;
+          font-size: 13.5px;
+          font-weight: 500;
+          text-decoration: none;
+          border: 1px solid var(--line);
+          color: var(--ink);
+        }
+        .price-card.featured :global(.price-btn) {
+          background: var(--plum);
+          color: #fff;
+          border: none;
         }
 
         .cta-band {
@@ -354,6 +602,19 @@ export default function Home() {
         }
 
         @media (min-width: 760px) {
+          .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            font-size: 14px;
+            color: var(--ink-soft);
+          }
+          .nav-links a {
+            text-decoration: none;
+          }
+          .nav-links a:hover {
+            color: var(--ink);
+          }
           .hero {
             grid-template-columns: 1.05fr 0.95fr;
             align-items: center;
@@ -366,8 +627,15 @@ export default function Home() {
           .stage {
             height: 340px;
           }
-          .features {
+          .feature-grid {
             grid-template-columns: repeat(3, 1fr);
+          }
+          .showcase {
+            grid-template-columns: 0.9fr 1.1fr;
+            align-items: center;
+          }
+          .pricing-grid {
+            grid-template-columns: repeat(2, 1fr);
           }
         }
         @media (prefers-reduced-motion: reduce) {
