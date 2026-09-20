@@ -292,7 +292,7 @@ export default function LoginPage() {
           padding: 4px;
           margin-bottom: 32px;
         }
-        .tab {
+        :global(.tab) {
           flex: 1;
           text-align: center;
           padding: 10px 0;
