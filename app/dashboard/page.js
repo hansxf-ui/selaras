@@ -84,15 +84,21 @@ export default function DashboardPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("is_premium")
+        .select("is_premium, has_onboarded")
         .eq("id", user.id)
         .single();
 
       if (profile) {
         setIsPremium(profile.is_premium);
+        if (!profile.has_onboarded) {
+          router.push("/onboarding");
+          return;
+        }
       } else {
-        // profil belum ada (user lama sebelum fitur ini) -> buat baru
-        await supabase.from("profiles").insert({ id: user.id, is_premium: false });
+        // profil belum ada (user baru atau user lama sebelum fitur ini) -> buat baru
+        await supabase.from("profiles").insert({ id: user.id, is_premium: false, has_onboarded: false });
+        router.push("/onboarding");
+        return;
       }
 
       const { data, error } = await supabase
